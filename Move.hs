@@ -42,8 +42,8 @@ filterByDirection W (px,py) (x,y, _) = px == x && y < py
 filterByDirection E (px,py) (x,y, _) = px == x && y > py
 filterByDirection N (px,py) (x,y, _) = py == y && x < px
 filterByDirection S (px,py) (x,y, _) = py == y && x > px
-filterByDirection NE (px,py) (x,y, _) = (py - y) == (px - x) && x < px
-filterByDirection NW (px,py) (x,y, _) = (py - y) == (x - px) && x < px
+filterByDirection NE (px,py) (x,y, _) = (py - y) == (x - px) && x < px
+filterByDirection NW (px,py) (x,y, _) = (py - y) == (px - x) && x < px
 filterByDirection SW (px,py) (x,y, _) = (py - y) == (x - px) && x > px
 filterByDirection SE (px,py) (x,y, _) = (py - y) == (px - x) && x > px
 
@@ -79,7 +79,8 @@ forbiddenMoves _ _ _ [] = []
 forbiddenHorizon :: Pos -> PieceColor -> Board -> [Pos]
 forbiddenHorizon pos color board = concatMap (\(dir, e) -> forbiddenMoves dir pos color e) (firstElementByDirection pos board)
 
--- forbiddenHorizon (0,0) Black initialBoard
+-- forbiddenHorizon (7,2) White initialBoard
+-- firstElementByDirection (7,2) initialBoard
 -- firstElementByDirection (0,0) initialBoard
 
 otherPlayer :: PieceColor -> PieceColor
@@ -116,7 +117,10 @@ genMoves board pos = map (\newpos -> movePos pos newpos board) $ genValidMoves b
 -- :t genMoves
 
 -- genMoves initialBoard (1,0) 
-data State = State { current :: Board, player :: PieceColor } deriving Show
+data State = State { current :: Board, player :: PieceColor } 
+
+instance Show State where
+    show state = case state of (State current player) -> "player: " ++ (show player) ++ "\n" ++ (prettyBoard current)
 
 nextStates :: State -> [State]
 nextStates (State current player) = let pieces = colorPos player current
