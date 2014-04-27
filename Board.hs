@@ -123,4 +123,5 @@ distributeLabel :: (Int, [(a,b)]) -> [(Int, a, b)]
 distributeLabel (l, xs) = map (\(y,e) -> (l, y, e)) xs
 
 piecePosition :: Board -> [(Int, Int, Square)]
-piecePosition board = concatMap distributeLabel $ zip [0..] (map (zip [0..]) board)
+piecePosition board = filter (\(x,y,p)->case p of Nothing -> False
+                                                  _ -> True ) (concatMap distributeLabel $ zip [0..] (map (zip [0..]) board))

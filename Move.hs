@@ -1,9 +1,8 @@
 module Move where
 
 import Board
-import Flatten
-import Utils
 import Data.List
+
 
 colorPos :: PieceColor -> Board -> [Pos]
 colorPos color board = map (\ (x,y,_) -> (x,y)) (filter (\(_, _, e) -> case e of Just (Piece _ c) -> color == c 
@@ -59,28 +58,60 @@ elementByDirection direction pos occupied = filter (filterByDirection direction 
 findElementsByDirection :: Pos -> [(Int, Int, a)] -> [[(Int, Int, a)]]
 findElementsByDirection pos occupied = map (\d -> elementByDirection d pos occupied) [N,NE,E,SE,S,SW,W,NW]
 
-firstElementByDirection :: Pos -> Board -> [(Direction, [(Int, Int, Square)])]
-firstElementByDirection pos board = zip [N,NE,E,SE,S,SW,W,NW] (map (\ xs -> take 1 (sortBy (orderPosition pos) xs))  (findElementsByDirection pos (piecePosition board)))
+head' :: [a] -> Maybe a
+head' []     = Nothing
+head' (x:xs) = Just x
+
+firstElementByDirection :: Pos -> Board -> [(Direction, Maybe (Int, Int, Square))]
+firstElementByDirection pos board = zip [N,NE,E,SE,S,SW,W,NW] (map (\xs -> head' (sortBy (orderPosition pos) xs))  (findElementsByDirection pos (piecePosition board)))
 -- :t firstElementByDirection
 
-forbiddenMoves :: Direction -> Pos -> PieceColor -> [(Int, Int, Square)] -> [Pos]
-forbiddenMoves _ _ _ ((_, _, Nothing):_) = error "invalid "
-forbiddenMoves dir (px,py) color ((ex, ey, Just (Piece _ ecolor)):xs) = case dir of N -> [(a, py) | a <- [0..ex], (a /= ex || color == ecolor) ] 
-                                                                                    S -> [(a, py) | a <- [ex..7], (a /= ex || color == ecolor) ] 
-                                                                                    E -> [(px, a) | a <- [ey..7], (a /= ey || color == ecolor) ] 
-                                                                                    W -> [(px, a) | a <- [0..ey], (a /= ey || color == ecolor) ] 
-                                                                                    SE -> [(ex+a, ey+a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex+a, ey+a)]
-                                                                                    NE -> [(ex-a, ey+a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex-a, ey+a)]
-                                                                                    NW -> [(ex-a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex-a, ey-a)]
-                                                                                    SW -> [(ex+a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex+a, ey-a)]
-forbiddenMoves _ _ _ [] = []
+forbiddenMoves :: Direction -> Pos -> PieceColor -> Maybe (Int, Int, Square) -> [Pos]
+forbiddenMoves dir pos _ Nothing = []
+-- forbiddenMoves dir (px,py) color (Just (ex, ey, Nothing)) = error ("dir="++ (show dir) ++" (px,py)=(" ++ (show px) ++ "," ++ (show py) ++ ") (ex,ey)=(" ++ (show ex) ++", "++ (show ey)++")")
+forbiddenMoves dir (px,py) color (Just (ex, ey, Just (Piece _ ecolor))) = case dir of N -> [(a, py) | a <- [0..ex], (a /= ex || color == ecolor) ] 
+                                                                                      S -> [(a, py) | a <- [ex..7], (a /= ex || color == ecolor) ] 
+                                                                                      E -> [(px, a) | a <- [ey..7], (a /= ey || color == ecolor) ] 
+                                                                                      W -> [(px, a) | a <- [0..ey], (a /= ey || color == ecolor) ] 
+                                                                                      SE -> [(ex+a, ey+a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex+a, ey+a)]
+                                                                                      NE -> [(ex-a, ey+a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex-a, ey+a)]
+                                                                                      NW -> [(ex-a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex-a, ey-a)]
+                                                                                      SW -> [(ex+a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex+a, ey-a)]
 
 -- horizon pos@(px,py) color board = concatMap (\(dir, e) -> buildHorizonMoves dir pos color e) (firstElementByDirection pos board)
 forbiddenHorizon :: Pos -> PieceColor -> Board -> [Pos]
 forbiddenHorizon pos color board = concatMap (\(dir, e) -> forbiddenMoves dir pos color e) (firstElementByDirection pos board)
 
+-- forbiddenHorizon (7,0) Black initialBoard
 -- forbiddenHorizon (7,2) White initialBoard
--- firstElementByDirection (7,2) initialBoard
+-- (movePos (6,0) (5,0) initialBoard)
+
+-- [[Just ♜,Just ♞,Just ♝,Just ♛,Just ♚,Just ♝,Just ♞,Just ♜],
+--  [Just ♟,Just ♟,Just ♟,Just ♟,Just ♟,Just ♟,Just ♟,Just ♟],
+--  [Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing],
+--  [Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing],
+--  [Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing],
+--  [Just ♙,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing],
+--  [Nothing,Just ♙,Just ♙,Just ♙,Just ♙,Just ♙,Just ♙,Just ♙],
+--  [Just ♖,Just ♘,Just ♗,Just ♔,Just ♕,Just ♗,Just ♘,Just ♖]]
+
+-- firstElementByDirection (7,0) (movePos (6,0) (5,0) initialBoard)
+-- [(N,Just (6,0,Nothing)),
+--  (NE,Just (6,1,Just ♙)),
+--  (E,Just (7,1,Just ♘)),
+--  (SE,Nothing),
+--  (S,Nothing),
+--  (SW,Nothing),
+--  (W,Nothing),
+--  (NW,Nothing)]
+
+-- (findElementsByDirection (7,0) (piecePosition (movePos (6,0) (5,0) initialBoard)))
+-- N [[(0,0,Just ♜),(1,0,Just ♟),(2,0,Nothing),(3,0,Nothing),(4,0,Nothing),(5,0,Just ♙),(6,0,Nothing)],
+-- NE [(0,7,Just ♜),(1,6,Just ♟),(2,5,Nothing),(3,4,Nothing),(4,3,Nothing),(5,2,Nothing),(6,1,Just ♙)],
+-- ..  [(7,1,Just ♘),(7,2,Just ♗),(7,3,Just ♔),(7,4,Just ♕),(7,5,Just ♗),(7,6,Just ♘),(7,7,Just ♖)]
+-- ..  ,[],[],[],[],[]]
+
+
 -- firstElementByDirection (0,0) initialBoard
 
 otherPlayer :: PieceColor -> PieceColor
@@ -120,10 +151,10 @@ genMoves board pos = map (\newpos -> movePos pos newpos board) $ genValidMoves b
 data State = State { current :: Board, player :: PieceColor } 
 
 instance Show State where
-    show state = case state of (State current player) -> "player: " ++ (show player) ++ "\n" ++ (prettyBoard current)
+    show state = case state of (State cur p) -> "player: " ++ (show p) ++ "\n" ++ (prettyBoard cur)
 
 nextStates :: State -> [State]
-nextStates (State current player) = let pieces = colorPos player current
-                                   in concatMap (\move -> [ State newboard (otherPlayer player) | newboard <- (genMoves current move)]) pieces
+nextStates (State cur p) = let pieces = colorPos p cur
+                                   in concatMap (\move -> [ State newboard (otherPlayer p) | newboard <- (genMoves cur move)]) pieces
 
 
