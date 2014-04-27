@@ -8,7 +8,7 @@ import Data.List
 data GameTree = GameTree {state::State, gameTree::[GameTree]} deriving Show
 
 play :: GameTree->Int
-play gt = play_aux True gt where
+play gt@(GameTree (State cur p) gts) = play_aux (p == Black) gt where
                   play_aux _ (GameTree (State cur _) []) = evalBoard cur
                   play_aux maximizingPlayer (GameTree _ xs) = case maximizingPlayer of True  -> maximum (map (play_aux False) xs)
                                                                                        False -> minimum (map (play_aux True) xs)
@@ -25,7 +25,8 @@ compareGT s1 s2 = (play s1) `compare` (play s2)
 
 
 doMove :: State -> State
-doMove s = let gt = buildGameTree 1 s
-            in state (head $ sortBy compareGT (gameTree gt))
+doMove s@(State cur p) = let gt = buildGameTree 4 s
+            in case p of Black -> state (last $ sortBy compareGT (gameTree gt))
+                         White -> state (head $ sortBy compareGT (gameTree gt))
 
 -- doMove (State initialBoard White)

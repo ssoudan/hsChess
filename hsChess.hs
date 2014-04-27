@@ -73,4 +73,4 @@ main = do
         -- sequence $ map print (nextStates (State initialBoard White))
 
         -- iterate print (doMove (State initialBoard White))
-        sequence $ map print $ take 30 (iterate doMove (State initialBoard White))
+        sequence $ map print $ take 300 (iterate doMove (State initialBoard White))
