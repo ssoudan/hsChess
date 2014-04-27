@@ -2,6 +2,7 @@ module Board where
 
 import Flatten
 import Utils
+import Data.List
 
 data PieceType = Rook | Knight | Bishop | King | Queen | Pawn deriving Eq
 data PieceColor = Black | White deriving Eq
@@ -123,18 +124,3 @@ distributeLabel (l, xs) = map (\(y,e) -> (l, y, e)) xs
 
 piecePosition :: Board -> [(Int, Int, Square)]
 piecePosition board = concatMap distributeLabel $ zip [0..] (map (zip [0..]) board)
-
-colorPos :: PieceColor->Board->[Pos]
-colorPos color board = map (\(x,y,_) -> (x,y)) $ filter (\(_, _, e) -> case e of Just (Piece _ c) -> color == c 
-                                                                                 _ -> False) $ piecePosition board
-
-moves::PieceType->[(Int,Int)]
-moves King   = [(x,y) | x <- [-1,0,1], y <- [-1,0,1]]
-moves Rook   = [(x,0) | x <- [-7..7]] ++ [(0,y) | y <- [-7..7], y /= 0]
-moves Queen  = [(x,0) | x <- [-7..7]] ++ [(0,y) | y <- [-7..7], y /= 0] ++ [(y,y) | y <- [-7..7], y /= 0] ++ [(-y,y) | y <- [-7..7], y /= 0]
-moves Knight = [(x,0) | x <- [-1..1]] ++ [(0,y) | y <- [-1..1], y /= 0] ++ [(y,y) | y <- [-1..1], y /= 0] ++ [(-y,y) | y <- [-1..1], y /= 0]
-moves Bishop = [(0,0)] ++ [(y,y) | y <- [-7..7], y /= 0] ++ [(-y,y) | y <- [-7..7], y /= 0]
-moves Pawn   = []
-
--- pos initialBoard
---colorPos White initialBoard

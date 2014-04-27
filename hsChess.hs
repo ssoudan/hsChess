@@ -1,6 +1,7 @@
 module Main where
 
 import Board
+import Move
 
 {-|
 From [http://www.haskell.org/haskellwiki/Learning_Haskell_with_Chess#Exercise_3_-_gametree_generation_and_minimax_algorithm]
@@ -67,3 +68,5 @@ main = do
 
         putStrLn ""
         putStr (prettyBoard initialBoard)
+
+        sequence $ map print (nextStates (State initialBoard White))
