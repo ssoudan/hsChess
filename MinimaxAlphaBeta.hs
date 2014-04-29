@@ -38,20 +38,22 @@ mmin a b
       | a < b = a 
       | otherwise = b
 
+
 minimax_aux :: Int -> Int -> Int -> [State] -> Bool -> Int
-minimax_aux _ alpha _ [] _ = alpha
+minimax_aux _ alpha _ [] True = alpha
+minimax_aux _ _ beta [] False = beta
 minimax_aux depth alpha beta (x:xs) True = let alphaP = minimax x (depth-1) alpha beta False
-                                               alphaMax = max alphaP alpha
+                                               alphaMax = mmax alphaP alpha
                                             in 
-                                               if alphaMax < beta
-                                                   then max alphaMax (minimax_aux depth alphaP beta xs True)
-                                                   else alphaMax
+                                               if beta <= alphaMax
+                                                   then alphaMax
+                                                   else minimax_aux depth alphaMax beta xs True
 minimax_aux depth alpha beta (x:xs) False = let betaP = minimax x (depth-1) alpha beta True 
-                                                betaMin = min betaP beta
+                                                betaMin = mmin betaP beta
                                              in 
-                                                if betaMin > alpha
-                                                    then min betaMin (minimax_aux depth alpha betaP xs False)
-                                                    else betaMin
+                                                if betaMin <= alpha
+                                                    then betaMin
+                                                    else minimax_aux depth alpha betaMin xs False
 
 minimax :: State -> Int -> Int -> Int -> Bool -> Int
 minimax (State cur _) 0 _ _ maximizingPlayer = evalBoard cur

@@ -2,7 +2,7 @@ module Main where
 
 import Board
 import Move
-import Minimax
+import MinimaxAlphaBeta
 
 {-|
 From [http://www.haskell.org/haskellwiki/Learning_Haskell_with_Chess#Exercise_3_-_gametree_generation_and_minimax_algorithm]
@@ -73,5 +73,5 @@ main = do
         -- sequence $ map print (nextStates (State initialBoard White))
 
         -- iterate print (doMove (State initialBoard White))
-        sequence $ map print $ take 5 (iterate doMove (State initialBoard White))
+        sequence $ map print $ take 40 (iterate doMove (State initialBoard White))
 
