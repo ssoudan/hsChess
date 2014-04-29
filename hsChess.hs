@@ -63,14 +63,15 @@ Implement the function doMove::State->State, that choses the (best) next state.
 
 
 main = do 
-        putStrLn $ "board score's is: " ++ (show $ evalBoard initialBoard)
-        putStrLn $ "black score's is: " ++ (show $ evalBoardFor Black initialBoard)
-        putStrLn $ "white score's is: " ++ (show $ evalBoardFor White initialBoard)        
+        -- putStrLn $ "board score's is: " ++ (show $ evalBoard initialBoard)
+        -- putStrLn $ "black score's is: " ++ (show $ evalBoardFor Black initialBoard)
+        -- putStrLn $ "white score's is: " ++ (show $ evalBoardFor White initialBoard)        
 
-        putStrLn ""
-        --putStr (prettyBoard initialBoard)
+        -- putStrLn ""
+        -- putStr (prettyBoard initialBoard)
 
         -- sequence $ map print (nextStates (State initialBoard White))
 
         -- iterate print (doMove (State initialBoard White))
-        sequence $ map print $ take 300 (iterate doMove (State initialBoard White))
+        sequence $ map print $ take 5 (iterate doMove (State initialBoard White))
+

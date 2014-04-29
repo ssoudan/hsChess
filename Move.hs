@@ -151,10 +151,10 @@ genMoves board pos = map (\newpos -> movePos pos newpos board) $ genValidMoves b
 data State = State { current :: Board, player :: PieceColor } 
 
 instance Show State where
-    show state = case state of (State cur p) -> "player: " ++ (show p) ++ "\n" ++ (prettyBoard cur)
+    show state = case state of (State cur p) -> "player: " ++ (show p) ++ "\n" ++ "score: " ++ (show $ evalBoard cur) ++ "\n" ++ (prettyBoard cur)
 
 nextStates :: State -> [State]
 nextStates (State cur p) = let pieces = colorPos p cur
-                                   in concatMap (\move -> [ State newboard (otherPlayer p) | newboard <- (genMoves cur move)]) pieces
+                            in concatMap (\move -> [ State newboard (otherPlayer p) | newboard <- (genMoves cur move)]) pieces
 
 

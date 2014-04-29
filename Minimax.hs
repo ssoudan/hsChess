@@ -4,7 +4,6 @@ import Board
 import Move
 import Data.List
 
-
 data GameTree = GameTree {state::State, gameTree::[GameTree]} deriving Show
 
 play :: GameTree->Int

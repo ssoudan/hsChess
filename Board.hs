@@ -1,6 +1,5 @@
 module Board where
 
-import Flatten
 import Utils
 import Data.List
 
@@ -62,39 +61,49 @@ prettyBoard board = unlines $ map prettyPrintLine board
 -- putStr $ prettyBoard emptyBoard
 
 valuePiece :: Piece -> Int
-valuePiece (Piece King _) = 1000
-valuePiece (Piece Rook _) = 5
-valuePiece (Piece Queen _) = 9
-valuePiece (Piece Knight _) = 3
-valuePiece (Piece Pawn _) = 1
-valuePiece (Piece Bishop _) = 3
+valuePiece (Piece King c) = 1000
+valuePiece (Piece Rook c) = 5
+valuePiece (Piece Queen c) = 9
+valuePiece (Piece Knight c) = 3
+valuePiece (Piece Pawn c) = 1
+valuePiece (Piece Bishop c) = 3
 
 instance Ord Piece where 
-	 p1 `compare` p2 = (valuePiece p1) `compare` (valuePiece p2)
+	p1 `compare` p2 = (valuePiece p1) `compare` (valuePiece p2)
 
 squareScore :: Square -> Int
-squareScore Nothing = 0
 squareScore (Just piece) = valuePiece piece
+squareScore Nothing = 0
+
 
 -- (Piece King Black) > (Piece Queen Black) 
 -- :t (fmap squareScore)
-
--- (flatten emptyBoard)
 
 -- sum (map (sum . fmap squareScore) [[Nothing, Nothing], [Nothing, Just (Piece Knight Black)]])
 
 -- pieceColor (Piece King Black)
 
-evalBoardFor :: PieceColor -> Board -> Int
-evalBoardFor color x = sum $ map squareScore (filter (\p -> case p of Just (Piece _ c) -> c == color
-                                                                      _ -> False) (flatten x))
 
+--evalBoardFor :: PieceColor -> Board -> Int
+--evalBoardFor color x = sum $ map squareScore $ concatMap (filter (\p -> case p of Just (Piece _ c) -> c == color
+--                                                                                  _ -> False)) x
+
+evalBoardFor :: [Square] -> Int
+evalBoardFor x = sum $ map squareScore x
+
+isPiece :: Square -> Bool
+isPiece Nothing = False
+isPiece _ = True
+
+isBlack :: Square -> Bool
+isBlack (Just (Piece _ Black)) = True
+isBlack (Just (Piece _ White)) = False 
 
 evalBoard :: Board -> Int
-evalBoard x = let blackScore = evalBoardFor Black x
-                  whiteScore = evalBoardFor White x 
-              in (blackScore - whiteScore)
-
+evalBoard board = let blackScore = evalBoardFor blacks
+                      whiteScore = evalBoardFor whites 
+                   in (blackScore - whiteScore)
+                where (blacks, whites) =  partition isBlack $ filter isPiece $ concat board
 
 applyOnBoard :: (Square -> Square) -> Pos -> Board -> Board
 applyOnBoard f (x,y) board = applyAt (\row -> applyAt f y row) x board
@@ -119,9 +128,9 @@ movePos origin destination board = let piece = elementAt origin board
                                     in updateBoard destination piece board'
 -- :t movePos
 -- prettyBoard $ movePos (0,0) (2,0) initialBoard
-distributeLabel :: (Int, [(a,b)]) -> [(Int, a, b)]
-distributeLabel (l, xs) = map (\(y,e) -> (l, y, e)) xs
+-- distributeLabel :: (Int, [(a,b)]) -> [(Int, a, b)]
+-- distributeLabel (l, xs) = map (\(y,e) -> (l, y, e)) xs
 
 piecePosition :: Board -> [(Int, Int, Square)]
-piecePosition board = filter (\(x,y,p)->case p of Nothing -> False
-                                                  _ -> True ) (concatMap distributeLabel $ zip [0..] (map (zip [0..]) board))
+piecePosition board = [ (x,y,c) | (x, row) <- (zip [0..] board), (y,c) <- (zip [0..] row), c /= Nothing ]
+
