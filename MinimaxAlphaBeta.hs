@@ -58,8 +58,7 @@ minimax_aux depth alpha beta (x:xs) False = let betaP = minimax x (depth-1) alph
 minimax :: State -> Int -> Int -> Int -> Bool -> Int
 minimax (State cur _) 0 _ _ maximizingPlayer = evalBoard cur
 minimax state depth alpha beta b = minimax_aux depth alpha beta (nextStates state) b
-                                       
-                                       
+
 
 evalOption :: State -> PieceColor -> (Int, State)
 evalOption state color = (minimax state 4 initial_alpha initial_beta (color == Black), state)
@@ -67,6 +66,7 @@ evalOption state color = (minimax state 4 initial_alpha initial_beta (color == B
 compareOption :: (Int, State) -> (Int, State) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
 
+second :: (a, State) -> State
 second (_, x) = x
 
 doMove :: State -> State

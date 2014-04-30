@@ -56,7 +56,7 @@ prettyPrintLine [] = []
 prettyPrintLine (x:xs) = (prettySquare x)++(prettyPrintLine xs)
 
 prettyBoard::Board->String
-prettyBoard board = unlines $ map prettyPrintLine board
+prettyBoard board = ("  ---- B ----  \n" ++ unlines (map prettyPrintLine board) ++ "  ---- W ----  \n")
 
 -- putStr $ prettyBoard emptyBoard
 

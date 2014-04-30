@@ -9,8 +9,8 @@ data GameTree = GameTree {state::State, gameTree::[GameTree]} deriving Show
 play :: GameTree->Int
 play gt@(GameTree (State cur p) gts) = play_aux (p == Black) gt where
                   play_aux _ (GameTree (State cur _) []) = evalBoard cur
-                  play_aux maximizingPlayer (GameTree _ xs) = case maximizingPlayer of True  -> maximum (map (play_aux False) xs)
-                                                                                       False -> minimum (map (play_aux True) xs)
+                  play_aux True (GameTree _ xs) = maximum (map (play_aux False) xs)
+                  play_aux False (GameTree _ xs) = minimum (map (play_aux True) xs)
 
 buildGameTree :: Int -> State -> GameTree
 buildGameTree 0 s = GameTree s [] 

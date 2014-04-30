@@ -2,7 +2,9 @@ module Main where
 
 import Board
 import Move
-import MinimaxAlphaBeta
+import MinimaxAlphaBeta as AB
+import Minimax as M
+import MinimaxLazy as ML
 
 {-|
 From [http://www.haskell.org/haskellwiki/Learning_Haskell_with_Chess#Exercise_3_-_gametree_generation_and_minimax_algorithm]
@@ -61,6 +63,14 @@ Implement the function doMove::State->State, that choses the (best) next state.
 
 -}
 
+{-|
+
+TODO: 
+    - display the best moves of the other player
+-}
+
+alternate :: (a->a) -> (a->a) -> a -> [a]
+alternate f g a = a : alternate g f (f a)
 
 main = do 
         -- putStrLn $ "board score's is: " ++ (show $ evalBoard initialBoard)
@@ -73,5 +83,5 @@ main = do
         -- sequence $ map print (nextStates (State initialBoard White))
 
         -- iterate print (doMove (State initialBoard White))
-        sequence $ map print $ take 40 (iterate doMove (State initialBoard White))
+        sequence $ map print $ take 40 (alternate AB.doMove M.doMove (State initialBoard White))
 
