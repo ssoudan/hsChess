@@ -142,19 +142,23 @@ genValidMoves board pos = let (Just (Piece pt color)) = elementAt pos board
 
 -- genValidMoves (movePos (1,3) (5,3) initialBoard) (5,3)
 
-genMoves :: Board -> Pos -> [Board]
+genMoves :: Board -> Pos -> [BoardWithMove]
 genMoves board pos = map (\newpos -> movePos pos newpos board) $ genValidMoves board pos
 
 -- :t genMoves
 
 -- genMoves initialBoard (1,0) 
-data State = State { current :: Board, player :: PieceColor } 
+
+data State = State { current :: Board, move::String, player :: PieceColor } 
 
 instance Show State where
-    show state = case state of (State cur p) -> "player: " ++ (show p) ++ "\n" ++ "score: " ++ (show $ evalBoard cur) ++ "\n" ++ (prettyBoard cur)
+    show (State cur move p) = "-> move: " ++ move ++ "\n-> player: " ++ (show p) ++ "\n" ++ "-> score: " ++ (show $ evalBoard cur) ++ "\n"
+ 
+
+showState (State cur move p) = "move: " ++ move ++ "\n" ++ (prettyBoard cur) ++ "\n-> player: " ++ (show p) ++ "\n" ++ "-> score: " ++ (show $ evalBoard cur) ++ "\n"
 
 nextStates :: State -> [State]
-nextStates (State cur p) = let pieces = colorPos p cur
-                            in concatMap (\move -> [ State newboard (otherPlayer p) | newboard <- (genMoves cur move)]) pieces
+nextStates (State cur _ p) = let pieces = colorPos p cur
+                            in concatMap (\move -> [ State newboard notation (otherPlayer p) | (newboard, notation) <- (genMoves cur move)]) pieces
 
 

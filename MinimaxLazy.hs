@@ -28,7 +28,7 @@ import Data.List
 
 
 minimax :: State -> Int -> Bool -> Int
-minimax (State cur _) 0 maximizingPlayer = evalBoard cur
+minimax (State cur _ _) 0 maximizingPlayer = evalBoard cur
 minimax state depth True = maximum $ map (\m -> minimax m (depth-1) False) (nextStates state)
 minimax state depth False = minimum $ map (\m -> minimax m (depth-1) True) (nextStates state)
 
@@ -41,8 +41,8 @@ compareOption (s1,_) (s2,_) = s1 `compare` s2
 second (_, x) = x
 
 doMove :: State -> State
-doMove s@(State cur White) = second $ head ( sortBy compareOption ( map (\s -> evalOption s White) (nextStates s) ))
-doMove s@(State cur Black) = second $ last ( sortBy compareOption ( map (\s -> evalOption s Black) (nextStates s) ))
+doMove s@(State cur _ White) = second $ head ( sortBy compareOption ( map (\s -> evalOption s White) (nextStates s) ))
+doMove s@(State cur _ Black) = second $ last ( sortBy compareOption ( map (\s -> evalOption s Black) (nextStates s) ))
 
 
 -- doMove (State initialBoard White)

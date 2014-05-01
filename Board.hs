@@ -47,6 +47,17 @@ initialBoard = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece
 				[Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
 				[Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece King White), Just (Piece Queen White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
 
+jeuOuvert :: Board
+jeuOuvert = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bishop Black), Just (Piece Queen Black), Just (Piece King Black), Just (Piece Bishop Black), Just (Piece Knight Black), Just (Piece Rook Black)],
+        [Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Nothing, Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black)],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Just (Piece Pawn Black), Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Just (Piece Pawn White), Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Nothing, Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
+        [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece King White), Just (Piece Queen White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
+
+
 prettySquare :: Square -> String
 prettySquare Nothing = ". "
 prettySquare (Just p) = show p ++ " "
@@ -122,10 +133,19 @@ elementAt (x,y) board = (board!!x)!!y
 
 -- elementAt (0,0) initialBoard 
 
-movePos :: Pos -> Pos -> Board -> Board
+showPos (x,y) = (['a'..]!!y):show x
+
+type BoardWithMove = (Board, String)
+
+nameMove :: Board -> Pos -> Square -> Pos -> String
+nameMove board pos (Just (Piece pieceType _)) destination = let destPiece = elementAt destination board
+                                     in case destPiece of Nothing -> show pieceType ++ showPos destination
+                                                          Just _ ->  show pieceType ++ "x" ++ showPos destination
+
+movePos :: Pos -> Pos -> Board -> BoardWithMove
 movePos origin destination board = let piece = elementAt origin board
                                        board' = deleteSquare origin board
-                                    in updateBoard destination piece board'
+                                    in (updateBoard destination piece board', nameMove board origin piece destination)
 -- :t movePos
 -- prettyBoard $ movePos (0,0) (2,0) initialBoard
 -- distributeLabel :: (Int, [(a,b)]) -> [(Int, a, b)]

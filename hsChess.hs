@@ -73,15 +73,5 @@ alternate :: (a->a) -> (a->a) -> a -> [a]
 alternate f g a = a : alternate g f (f a)
 
 main = do 
-        -- putStrLn $ "board score's is: " ++ (show $ evalBoard initialBoard)
-        -- putStrLn $ "black score's is: " ++ (show $ evalBoardFor Black initialBoard)
-        -- putStrLn $ "white score's is: " ++ (show $ evalBoardFor White initialBoard)        
-
-        -- putStrLn ""
-        -- putStr (prettyBoard initialBoard)
-
-        -- sequence $ map print (nextStates (State initialBoard White))
-
-        -- iterate print (doMove (State initialBoard White))
-        sequence $ map print $ take 40 (alternate AB.doMove M.doMove (State initialBoard White))
+        sequence $ map (putStr . showState) $ take 40 (alternate AB.doMove AB.doMove (State jeuOuvert "init" White))
 

@@ -3,7 +3,7 @@ module MinimaxAlphaBeta where
 import Board
 import Move
 import Data.List
-
+import Debug.Trace
 
 -- from wikipedia [http://en.wikipedia.org/wiki/Alpha-beta_pruning]
 
@@ -50,18 +50,18 @@ minimax_aux depth alpha beta (x:xs) True = let alphaP = minimax x (depth-1) alph
                                                    else minimax_aux depth alphaMax beta xs True
 minimax_aux depth alpha beta (x:xs) False = let betaP = minimax x (depth-1) alpha beta True 
                                                 betaMin = mmin betaP beta
-                                             in 
-                                                if betaMin <= alpha
-                                                    then betaMin
-                                                    else minimax_aux depth alpha betaMin xs False
+                                               in 
+                                                  if betaMin <= alpha
+                                                      then betaMin
+                                                      else minimax_aux depth alpha betaMin xs False
 
 minimax :: State -> Int -> Int -> Int -> Bool -> Int
-minimax (State cur _) 0 _ _ maximizingPlayer = evalBoard cur
+minimax (State cur _ _) 0 _ _ maximizingPlayer = evalBoard cur
 minimax state depth alpha beta b = minimax_aux depth alpha beta (nextStates state) b
 
 
-evalOption :: State -> PieceColor -> (Int, State)
-evalOption state color = (minimax state 4 initial_alpha initial_beta (color == Black), state)
+evalOption :: State -> Bool -> (Int, State)
+evalOption state maximizingPlayer = (minimax state 4 initial_alpha initial_beta maximizingPlayer, state)
 
 compareOption :: (Int, State) -> (Int, State) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
@@ -70,5 +70,9 @@ second :: (a, State) -> State
 second (_, x) = x
 
 doMove :: State -> State
-doMove s@(State cur White) = second $ head ( sortBy compareOption ( map (\s -> evalOption s White) (nextStates s) ))
-doMove s@(State cur Black) = second $ last ( sortBy compareOption ( map (\s -> evalOption s Black) (nextStates s) ))
+doMove s@(State cur move White) = let sortedStates = ( sortBy compareOption ( map (\s -> evalOption s True) (nextStates s) ))
+                              in trace ("Sorted state for white move: " ++ show sortedStates) $
+                                 second $ head sortedStates
+doMove s@(State cur move Black) = let sortedStates = ( sortBy compareOption ( map (\s -> evalOption s False) (nextStates s) ))
+                              in trace ("Sorted state for black move: " ++ show sortedStates) $ 
+                              second $ last sortedStates
