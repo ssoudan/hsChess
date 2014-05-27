@@ -72,12 +72,12 @@ prettyBoard board = ("  ---- B ----  \n" ++ unlines (map prettyPrintLine board) 
 -- putStr $ prettyBoard emptyBoard
 
 valuePiece :: Piece -> Int
-valuePiece (Piece King c) = 1000
-valuePiece (Piece Rook c) = 5
-valuePiece (Piece Queen c) = 9
-valuePiece (Piece Knight c) = 3
-valuePiece (Piece Pawn c) = 1
-valuePiece (Piece Bishop c) = 3
+valuePiece (Piece King _) = 1000
+valuePiece (Piece Rook _) = 5
+valuePiece (Piece Queen _) = 9
+valuePiece (Piece Knight _) = 3
+valuePiece (Piece Pawn _) = 1
+valuePiece (Piece Bishop _) = 3
 
 instance Ord Piece where 
 	p1 `compare` p2 = (valuePiece p1) `compare` (valuePiece p2)
@@ -133,14 +133,15 @@ elementAt (x,y) board = (board!!x)!!y
 
 -- elementAt (0,0) initialBoard 
 
+showPos :: Pos -> String
 showPos (x,y) = (['a'..]!!y):show x
 
 type BoardWithMove = (Board, String)
 
 nameMove :: Board -> Pos -> Square -> Pos -> String
-nameMove board pos (Just (Piece pieceType _)) destination = let destPiece = elementAt destination board
-                                     in case destPiece of Nothing -> show pieceType ++ showPos destination
-                                                          Just _ ->  show pieceType ++ "x" ++ showPos destination
+nameMove board _ (Just (Piece pt _)) destination = let destPiece = elementAt destination board
+                                     in case destPiece of Nothing -> show pt ++ showPos destination
+                                                          Just _ ->  show pt ++ "x" ++ showPos destination
 
 movePos :: Pos -> Pos -> Board -> BoardWithMove
 movePos origin destination board = let piece = elementAt origin board

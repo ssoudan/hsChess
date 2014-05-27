@@ -60,14 +60,14 @@ findElementsByDirection pos occupied = map (\d -> elementByDirection d pos occup
 
 head' :: [a] -> Maybe a
 head' []     = Nothing
-head' (x:xs) = Just x
+head' (x:_) = Just x
 
 firstElementByDirection :: Pos -> Board -> [(Direction, Maybe (Int, Int, Square))]
 firstElementByDirection pos board = zip [N,NE,E,SE,S,SW,W,NW] (map (\xs -> head' (sortBy (orderPosition pos) xs))  (findElementsByDirection pos (piecePosition board)))
 -- :t firstElementByDirection
 
 forbiddenMoves :: Direction -> Pos -> PieceColor -> Maybe (Int, Int, Square) -> [Pos]
-forbiddenMoves dir pos _ Nothing = []
+forbiddenMoves _ _ _ Nothing = []
 -- forbiddenMoves dir (px,py) color (Just (ex, ey, Nothing)) = error ("dir="++ (show dir) ++" (px,py)=(" ++ (show px) ++ "," ++ (show py) ++ ") (ex,ey)=(" ++ (show ex) ++", "++ (show ey)++")")
 forbiddenMoves dir (px,py) color (Just (ex, ey, Just (Piece _ ecolor))) = case dir of N -> [(a, py) | a <- [0..ex], (a /= ex || color == ecolor) ] 
                                                                                       S -> [(a, py) | a <- [ex..7], (a /= ex || color == ecolor) ] 
@@ -152,13 +152,14 @@ genMoves board pos = map (\newpos -> movePos pos newpos board) $ genValidMoves b
 data State = State { current :: Board, move::String, player :: PieceColor } 
 
 instance Show State where
-    show (State cur move p) = "-> move: " ++ move ++ "\n-> player: " ++ (show p) ++ "\n" ++ "-> score: " ++ (show $ evalBoard cur) ++ "\n"
+    show (State cur m p) = "-> move: " ++ m ++ "\n-> player: " ++ (show p) ++ "\n" ++ "-> score: " ++ (show $ evalBoard cur) ++ "\n"
  
 
-showState (State cur move p) = "move: " ++ move ++ "\n" ++ (prettyBoard cur) ++ "\n-> player: " ++ (show p) ++ "\n" ++ "-> score: " ++ (show $ evalBoard cur) ++ "\n"
+showState :: State -> String
+showState (State cur m p) = "move: " ++ m ++ "\n" ++ (prettyBoard cur) ++ "\n-> player: " ++ (show p) ++ "\n" ++ "-> score: " ++ (show $ evalBoard cur) ++ "\n"
 
 nextStates :: State -> [State]
 nextStates (State cur _ p) = let pieces = colorPos p cur
-                            in concatMap (\move -> [ State newboard notation (otherPlayer p) | (newboard, notation) <- (genMoves cur move)]) pieces
+                            in concatMap (\m -> [ State newboard notation (otherPlayer p) | (newboard, notation) <- (genMoves cur m)]) pieces
 
 

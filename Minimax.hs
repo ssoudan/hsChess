@@ -8,8 +8,8 @@ import Debug.Trace
 data GameTree = GameTree {state::State, gameTree::[GameTree]} deriving Show
 
 play :: GameTree->Int
-play gt@(GameTree (State cur _ p) gts) = play_aux (p == Black) gt where
-                  play_aux _ (GameTree (State cur _ _) []) = evalBoard cur
+play gt@(GameTree (State _ _ p) _) = play_aux (p == Black) gt where
+                  play_aux _ (GameTree (State c _ _) []) = evalBoard c
                   play_aux True (GameTree _ xs) = maximum (map (play_aux False) xs)
                   play_aux False (GameTree _ xs) = minimum (map (play_aux True) xs)
 
@@ -31,7 +31,7 @@ second :: (a, GameTree) -> GameTree
 second (_, x) = x
 
 doMove :: State -> State
-doMove s@(State cur _ p) = let gt = buildGameTree 4 s
+doMove s@(State _ _ p) = let gt = buildGameTree 4 s
             in case p of Black -> let sortedMoves = sortBy compareOption (map (\g -> (play g, g)) (gameTree gt))
                                    in trace ("Sorted state for black move: " ++ show sortedMoves) $
                                    state (second (last sortedMoves))

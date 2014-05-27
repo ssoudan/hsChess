@@ -25,7 +25,9 @@ import Debug.Trace
 --  (* Initial call *)
 --  alphabeta(origin, depth, -∞, +∞, TRUE)
 
+initial_alpha :: Int
 initial_alpha = -100000
+initial_beta :: Int
 initial_beta = 100000
 
 mmax :: Int -> Int -> Int
@@ -56,7 +58,7 @@ minimax_aux depth alpha beta (x:xs) False = let betaP = minimax x (depth-1) alph
                                                       else minimax_aux depth alpha betaMin xs False
 
 minimax :: State -> Int -> Int -> Int -> Bool -> Int
-minimax (State cur _ _) 0 _ _ maximizingPlayer = evalBoard cur
+minimax (State cur _ _) 0 _ _ _ = evalBoard cur
 minimax state depth alpha beta b = minimax_aux depth alpha beta (nextStates state) b
 
 
@@ -70,9 +72,9 @@ second :: (a, State) -> State
 second (_, x) = x
 
 doMove :: State -> State
-doMove s@(State cur move White) = let sortedStates = ( sortBy compareOption ( map (\s -> evalOption s True) (nextStates s) ))
+doMove s@(State _ _ White) = let sortedStates = ( sortBy compareOption ( map (\ss -> evalOption ss True) (nextStates s) ))
                               in trace ("Sorted state for white move: " ++ show sortedStates) $
                                  second $ head sortedStates
-doMove s@(State cur move Black) = let sortedStates = ( sortBy compareOption ( map (\s -> evalOption s False) (nextStates s) ))
+doMove s@(State _ _ Black) = let sortedStates = ( sortBy compareOption ( map (\ss -> evalOption ss False) (nextStates s) ))
                               in trace ("Sorted state for black move: " ++ show sortedStates) $ 
                               second $ last sortedStates
