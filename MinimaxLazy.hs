@@ -1,8 +1,8 @@
 module MinimaxLazy where
 
-import Board
-import Move
-import Data.List
+import           Board
+import           Data.List
+import           Move
 
 -- from wikipedia [http://en.wikipedia.org/wiki/Minimax]
 --
@@ -36,12 +36,13 @@ evalOption state color = (minimax state 4 (color == Black), state)
 compareOption :: (Int, State) -> (Int, State) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
 
-second :: (t, t1) -> t1
-second (_, x) = x
-
 doMove :: State -> State
-doMove s@(State _ _ White) = second $ minimumBy compareOption ( map (`evalOption` White) (nextStates s) )
-doMove s@(State _ _ Black) = second $ maximumBy compareOption ( map (`evalOption` Black) (nextStates s) )
+doMove s@(State _ _ White) = case playerColor of 
+                                                White -> snd $ minimumBy compareOption options
+                                                Black -> snd $ maximumBy compareOption options
+                             where options = map (`evalOption` playerColor) (nextStates s)
+                                   playerColor = player s
+
 
 
 -- doMove (State initialBoard White)

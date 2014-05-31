@@ -1,8 +1,8 @@
 module Board where
 
-import Utils
-import Data.List
-import Data.Maybe (isJust)
+import           Data.List
+import           Data.Maybe (isJust)
+import           Utils
 
 data PieceType = Rook | Knight | Bishop | King | Queen | Pawn deriving Eq
 data PieceColor = Black | White deriving Eq
@@ -40,13 +40,13 @@ emptyBoard = [[Nothing | _ <- [1..8]] | _ <- [1..8]]
 
 initialBoard :: Board
 initialBoard = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bishop Black), Just (Piece Queen Black), Just (Piece King Black), Just (Piece Bishop Black), Just (Piece Knight Black), Just (Piece Rook Black)],
-				[Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black)],
-				[Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
-				[Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
-				[Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
-				[Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
-				[Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
-				[Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece King White), Just (Piece Queen White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
+        [Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black)],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
+        [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece King White), Just (Piece Queen White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
 
 jeuOuvert :: Board
 jeuOuvert = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bishop Black), Just (Piece Queen Black), Just (Piece King Black), Just (Piece Bishop Black), Just (Piece Knight Black), Just (Piece Rook Black)],
@@ -79,15 +79,15 @@ valuePiece (Piece Knight _) = 3
 valuePiece (Piece Pawn _) = 1
 valuePiece (Piece Bishop _) = 3
 
-instance Ord Piece where 
-	p1 `compare` p2 = valuePiece p1 `compare` valuePiece p2
+instance Ord Piece where
+  p1 `compare` p2 = valuePiece p1 `compare` valuePiece p2
 
 squareScore :: Square -> Int
 squareScore (Just piece) = valuePiece piece
 squareScore Nothing = 0
 
 
--- (Piece King Black) > (Piece Queen Black) 
+-- (Piece King Black) > (Piece Queen Black)
 -- :t (fmap squareScore)
 
 -- sum (map (sum . fmap squareScore) [[Nothing, Nothing], [Nothing, Just (Piece Knight Black)]])
@@ -108,11 +108,11 @@ isPiece _ = True
 
 isBlack :: Square -> Bool
 isBlack (Just (Piece _ Black)) = True
-isBlack (Just (Piece _ White)) = False 
+isBlack (Just (Piece _ White)) = False
 
 evalBoard :: Board -> Int
 evalBoard board = let blackScore = evalBoardFor blacks
-                      whiteScore = evalBoardFor whites 
+                      whiteScore = evalBoardFor whites
                    in (blackScore - whiteScore)
                 where (blacks, whites) =  partition isBlack $ filter isPiece $ concat board
 
@@ -131,7 +131,7 @@ deleteSquare pos= updateBoard pos Nothing
 elementAt :: Pos -> Board -> Square
 elementAt (x,y) board = (board!!x)!!y
 
--- elementAt (0,0) initialBoard 
+-- elementAt (0,0) initialBoard
 
 showPos :: Pos -> String
 showPos (x,y) = (['a'..]!!y):show x
