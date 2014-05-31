@@ -6,13 +6,13 @@ import           Data.List
 import           Data.Maybe    (listToMaybe)
 
 colorPos :: PieceColor -> Board -> [Pos]
-colorPos color board = map (\ (x,y,_) -> (x,y)) (filter (\(_, _, e) -> case e of Just (Piece _ c) -> color == c
-                                                                                 _ -> False) $ piecePosition board)
+colorPos color board = map (\ (x,y,_) -> (Pos (x,y))) (filter (\(_, _, e) -> case e of Just (Piece _ c) -> color == c
+                                                                                       _ -> False) $ piecePosition board)
 
 -- pos initialBoard
 -- colorPos White initialBoard
 
-moves :: PieceType -> [(Int,Int)]
+moves :: PieceType -> [(Int, Int)]
 moves King   = [(x,y) | x <- [-1,0,1], y <- [-1,0,1]]
 moves Rook   = [(x,0) | x <- [-7..7]] ++ [(0,y) | y <- [-7..7], y /= 0]
 moves Queen  = [(x,0) | x <- [-7..7]] ++ [(0,y) | y <- [-7..7], y /= 0] ++ [(y,y) | y <- [-7..7], y /= 0] ++ [(-y,y) | y <- [-7..7], y /= 0]
@@ -21,10 +21,10 @@ moves Bishop = [(0,0)] ++ [(y,y) | y <- [-7..7], y /= 0] ++ [(-y,y) | y <- [-7..
 moves Pawn   = []
 
 boardFilter :: Pos -> Bool
-boardFilter (x, y) = x >= 0 && x <= 7 && y >= 0 && y <= 7
+boardFilter (Pos (x, y)) = x >= 0 && x <= 7 && y >= 0 && y <= 7
 
 movesAtPosition :: Pos -> PieceType -> [Pos]
-movesAtPosition (x,y) pt = map ((+) x *** (+) y) (moves pt)
+movesAtPosition (Pos (x,y)) pt = map (Pos . ((+) x *** (+) y)) (moves pt)
 
 data Direction = N | NE | E | SE | S | SW | W | NW deriving (Show, Eq)
 
@@ -38,17 +38,17 @@ data Direction = N | NE | E | SE | S | SW | W | NW deriving (Show, Eq)
 --                               | (py - y) == (px - x) && x < px = SW
 
 filterByDirection :: Direction -> Pos -> (Int, Int, a) -> Bool
-filterByDirection W (px,py) (x,y, _) = px == x && y < py
-filterByDirection E (px,py) (x,y, _) = px == x && y > py
-filterByDirection N (px,py) (x,y, _) = py == y && x < px
-filterByDirection S (px,py) (x,y, _) = py == y && x > px
-filterByDirection NE (px,py) (x,y, _) = (py - y) == (x - px) && x < px
-filterByDirection NW (px,py) (x,y, _) = (py - y) == (px - x) && x < px
-filterByDirection SW (px,py) (x,y, _) = (py - y) == (x - px) && x > px
-filterByDirection SE (px,py) (x,y, _) = (py - y) == (px - x) && x > px
+filterByDirection direction (Pos (px,py)) (x,y, _) = case direction of W -> px == x && y < py
+                                                                       E -> px == x && y > py
+                                                                       N -> py == y && x < px
+                                                                       S -> py == y && x > px
+                                                                       NE -> (py - y) == (x - px) && x < px
+                                                                       NW -> (py - y) == (px - x) && x < px
+                                                                       SW -> (py - y) == (x - px) && x > px
+                                                                       SE -> (py - y) == (px - x) && x > px
 
 distance :: Pos -> (Int, Int, a) -> Int
-distance (px,py) (x,y,_) = abs (px - x) + abs (py - y)
+distance (Pos (px,py)) (x,y,_) = abs (px - x) + abs (py - y)
 
 orderPosition :: Pos -> (Int, Int, a) -> (Int, Int, b) -> Ordering
 orderPosition pos p1 p2 = distance pos p1 `compare` distance pos p2
@@ -65,15 +65,15 @@ firstElementByDirection pos board = zip [N,NE,E,SE,S,SW,W,NW] (map (listToMaybe 
 
 forbiddenMoves :: Direction -> Pos -> PieceColor -> Maybe (Int, Int, Square) -> [Pos]
 forbiddenMoves _ _ _ Nothing = []
--- forbiddenMoves dir (px,py) color (Just (ex, ey, Nothing)) = error ("dir="++ (show dir) ++" (px,py)=(" ++ (show px) ++ "," ++ (show py) ++ ") (ex,ey)=(" ++ (show ex) ++", "++ (show ey)++")")
-forbiddenMoves dir (px,py) color (Just (ex, ey, Just (Piece _ ecolor))) = case dir of N -> [(a, py) | a <- [0..ex], a /= ex || color == ecolor ]
-                                                                                      S -> [(a, py) | a <- [ex..7], a /= ex || color == ecolor ]
-                                                                                      E -> [(px, a) | a <- [ey..7], a /= ey || color == ecolor ]
-                                                                                      W -> [(px, a) | a <- [0..ey], a /= ey || color == ecolor ]
-                                                                                      SE -> [(ex+a, ey+a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex+a, ey+a)]
-                                                                                      NE -> [(ex-a, ey+a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex-a, ey+a)]
-                                                                                      NW -> [(ex-a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex-a, ey-a)]
-                                                                                      SW -> [(ex+a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (ex+a, ey-a)]
+forbiddenMoves dir (Pos (px,py)) _ (Just (ex, ey, Nothing)) = error $ "dir="++ show dir ++" (px,py)=(" ++ show px ++ "," ++ show py ++ ") (ex,ey)=(" ++ show ex ++", "++ show ey ++")"
+forbiddenMoves dir (Pos (px,py)) color (Just (ex, ey, Just (Piece _ ecolor))) = case dir of N -> [Pos (a, py) | a <- [0..ex], a /= ex || color == ecolor ]
+                                                                                            S -> [Pos (a, py) | a <- [ex..7], a /= ex || color == ecolor ]
+                                                                                            E -> [Pos (px, a) | a <- [ey..7], a /= ey || color == ecolor ]
+                                                                                            W -> [Pos (px, a) | a <- [0..ey], a /= ey || color == ecolor ]
+                                                                                            SE -> [Pos (ex+a, ey+a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (Pos (ex+a, ey+a))]
+                                                                                            NE -> [Pos (ex-a, ey+a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (Pos (ex-a, ey+a))]
+                                                                                            NW -> [Pos (ex-a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (Pos (ex-a, ey-a))]
+                                                                                            SW -> [Pos (ex+a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (Pos (ex+a, ey-a))]
 
 -- horizon pos@(px,py) color board = concatMap (\(dir, e) -> buildHorizonMoves dir pos color e) (firstElementByDirection pos board)
 forbiddenHorizon :: Pos -> PieceColor -> Board -> [Pos]
@@ -116,12 +116,12 @@ otherPlayer Black = White
 otherPlayer White = Black
 
 makePawnLegalMoves :: PieceColor -> Pos -> Board -> [Pos]
-makePawnLegalMoves color (px,py) board = let otherPlayerPosition = colorPos (otherPlayer color) board
-                                             validMoves = case color of Black -> [(px + a, py) | a <- [1,2], a /= 2 || px == 1]
-                                                                        White -> [(px - a, py) | a <- [1,2], a /= 2 || px == 6]
-                                             optMoves = case color of Black -> [(px + 1, py + 1), (px + 1, py - 1)]
-                                                                      White -> [(px - 1, py + 1), (px - 1, py - 1)]
-                                          in [(x,y) | (x,y) <- (validMoves \\ otherPlayerPosition) ++ (optMoves `intersect` otherPlayerPosition), boardFilter (x, y)]
+makePawnLegalMoves color (Pos (px,py)) board = let otherPlayerPosition = colorPos (otherPlayer color) board
+                                                   validMoves = case color of Black -> [Pos (px + a, py) | a <- [1,2], a /= 2 || px == 1]
+                                                                              White -> [Pos (px - a, py) | a <- [1,2], a /= 2 || px == 6]
+                                                   optMoves = case color of Black -> [Pos (px + 1, py + 1), Pos (px + 1, py - 1)]
+                                                                            White -> [Pos (px - 1, py + 1), Pos (px - 1, py - 1)]
+                                                in [Pos (x,y) | (Pos (x,y)) <- (validMoves \\ otherPlayerPosition) ++ (optMoves `intersect` otherPlayerPosition), boardFilter (Pos (x, y))]
 
 -- makePawnLegalMoves Black (1,0) initialBoard
 

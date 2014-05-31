@@ -12,7 +12,7 @@ type Square = Maybe Piece
 
 type Board = [[Square]]
 
-type Pos = (Int, Int)
+newtype Pos = Pos (Int, Int) deriving (Eq, Show)
 
 instance Show PieceColor where
     show Black = "B"
@@ -70,14 +70,16 @@ prettyBoard::Board->String
 prettyBoard board = "  ---- B ----  \n" ++ unlines (map prettyPrintLine board) ++ "  ---- W ----  \n"
 
 -- putStr $ prettyBoard emptyBoard
+valuePieceMap :: PieceType -> Int
+valuePieceMap King = 1000
+valuePieceMap Rook = 5
+valuePieceMap Queen = 9
+valuePieceMap Knight = 3
+valuePieceMap Pawn = 1
+valuePieceMap Bishop = 3
 
 valuePiece :: Piece -> Int
-valuePiece (Piece King _) = 1000
-valuePiece (Piece Rook _) = 5
-valuePiece (Piece Queen _) = 9
-valuePiece (Piece Knight _) = 3
-valuePiece (Piece Pawn _) = 1
-valuePiece (Piece Bishop _) = 3
+valuePiece = valuePieceMap . pieceType
 
 instance Ord Piece where
   p1 `compare` p2 = valuePiece p1 `compare` valuePiece p2
@@ -117,24 +119,22 @@ evalBoard board = let blackScore = evalBoardFor blacks
                 where (blacks, whites) =  partition isBlack $ filter isPiece $ concat board
 
 applyOnBoard :: (Square -> Square) -> Pos -> Board -> Board
-applyOnBoard f (x,y) = applyAt (applyAt f y) x
+applyOnBoard f (Pos (x,y)) = applyAt (applyAt f y) x
 
 updateBoard :: Pos -> Square -> Board -> Board
-updateBoard pos piece = applyOnBoard (const  piece) pos
+updateBoard pos piece = applyOnBoard (const piece) pos
 
 deleteSquare :: Pos -> Board -> Board
-deleteSquare pos= updateBoard pos Nothing
+deleteSquare pos = updateBoard pos Nothing
 
 -- prettyBoard (updateBoard (3,3) (Just (Piece Bishop Black)) emptyBoard)
 -- prettyBoard (deleteSquare (0,0) initialBoard)
 
 elementAt :: Pos -> Board -> Square
-elementAt (x,y) board = (board!!x)!!y
-
--- elementAt (0,0) initialBoard
+elementAt (Pos (x,y)) board = (board!!x)!!y
 
 showPos :: Pos -> String
-showPos (x,y) = (['a'..]!!y):show x
+showPos (Pos (x,y)) = (['a'..]!!y):show x
 
 type BoardWithMove = (Board, String)
 
