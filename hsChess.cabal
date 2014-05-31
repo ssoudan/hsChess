@@ -63,7 +63,7 @@ executable hsChess
   build-depends:     base >=4.6 && <4.8
   
   -- Directories containing source files.
-  -- hs-source-dirs:      
+  hs-source-dirs:    src/
   
   -- Base language which the package is written in.
   default-language:  Haskell2010
@@ -75,5 +75,14 @@ source-repository head
   type:              git 
   location:          https://github.com/ssoudan/hsChess.git
 
-
-  
+test-suite hsChess-tests
+  type:              exitcode-stdio-1.0
+  hs-source-dirs:    test, src
+  main-is:           MainTestSuite.hs
+  build-depends:     base,
+                     HUnit,
+                     QuickCheck,
+                     test-framework,
+                     test-framework-hunit,
+                     test-framework-quickcheck2
+  default-language:  Haskell2010
