@@ -2,6 +2,7 @@ module Board where
 
 import Utils
 import Data.List
+import Data.Maybe (isJust)
 
 data PieceType = Rook | Knight | Bishop | King | Queen | Pawn deriving Eq
 data PieceColor = Black | White deriving Eq
@@ -31,7 +32,7 @@ prettyPrintPiece (Piece p Black) | p == King = "\x265A"| p == Queen = "\x265B"| 
 prettyPrintPiece (Piece _ _) = "??"
 
 instance Show Piece where
-    show piece = prettyPrintPiece piece
+    show = prettyPrintPiece
 
 -- Just (Piece Rook Black)
 emptyBoard :: Board
@@ -63,11 +64,10 @@ prettySquare Nothing = ". "
 prettySquare (Just p) = show p ++ " "
 
 prettyPrintLine :: [Square] -> String
-prettyPrintLine [] = []
-prettyPrintLine (x:xs) = (prettySquare x)++(prettyPrintLine xs)
+prettyPrintLine = foldr ((++) . prettySquare) []
 
 prettyBoard::Board->String
-prettyBoard board = ("  ---- B ----  \n" ++ unlines (map prettyPrintLine board) ++ "  ---- W ----  \n")
+prettyBoard board = "  ---- B ----  \n" ++ unlines (map prettyPrintLine board) ++ "  ---- W ----  \n"
 
 -- putStr $ prettyBoard emptyBoard
 
@@ -80,7 +80,7 @@ valuePiece (Piece Pawn _) = 1
 valuePiece (Piece Bishop _) = 3
 
 instance Ord Piece where 
-	p1 `compare` p2 = (valuePiece p1) `compare` (valuePiece p2)
+	p1 `compare` p2 = valuePiece p1 `compare` valuePiece p2
 
 squareScore :: Square -> Int
 squareScore (Just piece) = valuePiece piece
@@ -117,13 +117,13 @@ evalBoard board = let blackScore = evalBoardFor blacks
                 where (blacks, whites) =  partition isBlack $ filter isPiece $ concat board
 
 applyOnBoard :: (Square -> Square) -> Pos -> Board -> Board
-applyOnBoard f (x,y) board = applyAt (\row -> applyAt f y row) x board
+applyOnBoard f (x,y) = applyAt (applyAt f y) x
 
 updateBoard :: Pos -> Square -> Board -> Board
-updateBoard pos piece board = applyOnBoard (\_ -> piece) pos board
+updateBoard pos piece = applyOnBoard (const  piece) pos
 
 deleteSquare :: Pos -> Board -> Board
-deleteSquare pos board = updateBoard pos (Nothing) board
+deleteSquare pos= updateBoard pos Nothing
 
 -- prettyBoard (updateBoard (3,3) (Just (Piece Bishop Black)) emptyBoard)
 -- prettyBoard (deleteSquare (0,0) initialBoard)
@@ -153,5 +153,5 @@ movePos origin destination board = let piece = elementAt origin board
 -- distributeLabel (l, xs) = map (\(y,e) -> (l, y, e)) xs
 
 piecePosition :: Board -> [(Int, Int, Square)]
-piecePosition board = [ (x,y,c) | (x, row) <- (zip [0..] board), (y,c) <- (zip [0..] row), c /= Nothing ]
+piecePosition board = [ (x,y,c) | (x, row) <- zip [0..] board, (y,c) <- zip [0..] row, isJust c ]
 

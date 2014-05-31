@@ -40,8 +40,8 @@ second :: (t, t1) -> t1
 second (_, x) = x
 
 doMove :: State -> State
-doMove s@(State _ _ White) = second $ head ( sortBy compareOption ( map (\ss -> evalOption ss White) (nextStates s) ))
-doMove s@(State _ _ Black) = second $ last ( sortBy compareOption ( map (\ss -> evalOption ss Black) (nextStates s) ))
+doMove s@(State _ _ White) = second $ minimumBy compareOption ( map (`evalOption` White) (nextStates s) )
+doMove s@(State _ _ Black) = second $ maximumBy compareOption ( map (`evalOption` Black) (nextStates s) )
 
 
 -- doMove (State initialBoard White)
