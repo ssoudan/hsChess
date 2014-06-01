@@ -1,3 +1,9 @@
+{-
+ MinimaxLazy.hs
+
+ Copyright (c) 2014 by Sebastien Soudan.  
+ Apache License Version 2.0, January 2004
+-}
 module MinimaxLazy where
 
 import           Board
@@ -48,6 +54,3 @@ doMove s = case playerColor of
      where options = map (`evalOption` playerColor) (nextStates s) 
            playerColor = player s
 
-
-
--- doMove (State initialBoard White)

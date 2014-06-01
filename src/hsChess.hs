@@ -1,3 +1,9 @@
+{-
+ hsChess.hs
+
+ Copyright (c) 2014 by Sebastien Soudan.  
+ Apache License Version 2.0, January 2004
+-}
 module Main where
 
 import           Board
@@ -7,6 +13,7 @@ import           MinimaxLazy      as ML
 import           Move
 
 {-|
+
 From [http://www.haskell.org/haskellwiki/Learning_Haskell_with_Chess#Exercise_3_-_gametree_generation_and_minimax_algorithm]
 
 1 Exercise 1 - data types
@@ -63,16 +70,17 @@ Implement the function doMove::State->State, that choses the (best) next state.
 
 -}
 
-{-|
 
-TODO:
-    - display the best moves of the other player
--}
+
+-- TODO:
+--    - add manual strategy
+--    
+
 
 alternate :: (a->a) -> (a->a) -> a -> [a]
 alternate f g a = a : alternate g f (f a)
 
 main :: IO [()]
 main = do
-        sequence $ map (putStr . showState) $ take 5 (alternate AB.doMove AB.doMove (State jeuOuvert "init" White))
+        sequence $ map (putStr . showState) $ take 5 (alternate AB.doMove M.doMove (State jeuOuvert "init" White))
 

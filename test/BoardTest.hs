@@ -1,14 +1,27 @@
+{-
+ BoardTest.hs
+
+ Copyright (c) 2014 by Sebastien Soudan.  
+ Apache License Version 2.0, January 2004
+-}
 module BoardTest where
 
 import           Board
+import           Data.Maybe (isNothing)
 import           Test.QuickCheck     (Arbitrary (..))
 import           Test.QuickCheck.Gen (choose, elements)
 
-testEvalBoard = evalBoard initialBoard == 0
+prop_evalBoard :: Bool
+prop_evalBoard = evalBoard initialBoard == 0
 
-testElementAt = elementAt (Pos (0,0)) initialBoard == Just (Piece Rook Black)
-testElementAt2 = elementAt (Pos (4,4)) initialBoard == Nothing
-testElementAt3 = elementAt (Pos (7,7)) initialBoard == Just (Piece Rook White)
+prop_elementAt :: Bool
+prop_elementAt = elementAt (Pos (0,0)) initialBoard == Just (Piece Rook Black)
+
+prop_elementAt2 :: Bool
+prop_elementAt2 = isNothing $ elementAt (Pos (4,4)) initialBoard
+
+prop_elementAt3 :: Bool
+prop_elementAt3 = elementAt (Pos (7,7)) initialBoard == Just (Piece Rook White)
 
 instance Arbitrary PieceType where
     arbitrary = elements [Pawn, Rook, Queen, King, Bishop, Knight]
@@ -22,9 +35,15 @@ instance Arbitrary Pos where
       y <- choose (0,7)
       return $ Pos (x, y)
 
-testValuePiece pieceType = valuePiece (Piece pieceType Black) == valuePiece (Piece pieceType White)
+prop_valuePiece :: PieceType -> Bool
+prop_valuePiece ptype = valuePiece (Piece ptype Black) == valuePiece (Piece ptype White)
 
-testDeleteSquare :: Pos -> Bool
-testDeleteSquare pos = elementAt pos updatedBoard == Nothing
+prop_deleteSquare :: Pos -> Bool
+prop_deleteSquare pos = isNothing $ elementAt pos updatedBoard
                        where
                              updatedBoard = deleteSquare pos initialBoard
+
+prop_movePos :: Pos -> Pos -> Bool
+prop_movePos origin destination = let originalBoard = initialBoard
+                                      (movedBoard, _) = movePos origin destination originalBoard
+                                   in elementAt destination movedBoard == elementAt origin originalBoard && isNothing (elementAt origin movedBoard)

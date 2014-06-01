@@ -1,3 +1,9 @@
+{-
+ Minimax.hs
+
+ Copyright (c) 2014 by Sebastien Soudan.  
+ Apache License Version 2.0, January 2004
+-}
 module Minimax where
 
 import           Board
@@ -28,12 +34,10 @@ compareOption :: (Int, GameTree) -> (Int, GameTree) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
 
 doMove :: State -> State
-doMove s@(State _ _ p) = case p of Black -> let sortedMoves = sortBy compareOption (map (\g -> (play g, g)) (gameTree gt))
-                                                 in trace ("Sorted state for black move: " ++ show sortedMoves) $
-                                                    state (snd (last sortedMoves))
-                                   White -> let sortedMoves = sortBy compareOption (map (\g -> (play g, g)) (gameTree gt))
-                                                 in trace ("Sorted state for black move: " ++ show sortedMoves) $
-                                                    state (snd (head sortedMoves))
-                   where gt = buildGameTree 4 s
+doMove s@(State _ _ p) = case p of Black -> state (snd (maximumBy compareOption options))
+                                   White -> state (snd (minimumBy compareOption options))
+                   where gt = gameTree $ buildGameTree 4 s
+                         doPlay = \g -> (play g, g)
+                         options = map doPlay gt
 
 -- doMove (State initialBoard White)

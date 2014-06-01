@@ -1,3 +1,9 @@
+{-
+ Move.hs
+
+ Copyright (c) 2014 by Sebastien Soudan.  
+ Apache License Version 2.0, January 2004
+-}
 module Move where
 
 import           Board
@@ -27,15 +33,6 @@ movesAtPosition :: Pos -> PieceType -> [Pos]
 movesAtPosition (Pos (x,y)) pt = map (Pos . ((+) x *** (+) y)) (moves pt)
 
 data Direction = N | NE | E | SE | S | SW | W | NW deriving (Show, Eq)
-
--- sortByDirection (px,py) (x,y) | px == x && y > py = N
---                               | px == x && y < py = S
---                               | py == y && x > px = E
---                               | py == y && x < px = W
---                               | (py - y) == (px - x) && x > px = NE
---                               | (py - y) == (x - px) && x > px = SE
---                               | (py - y) == (x - px) && x < px = NW
---                               | (py - y) == (px - x) && x < px = SW
 
 filterByDirection :: Direction -> Pos -> (Int, Int, a) -> Bool
 filterByDirection direction (Pos (px,py)) (x,y, _) = case direction of W -> px == x && y < py
@@ -74,7 +71,6 @@ forbiddenMoves dir (Pos (px,py)) color (Just (ex, ey, Just (Piece _ ecolor))) = 
                                                                                             NW -> [Pos (ex-a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (Pos (ex-a, ey-a))]
                                                                                             SW -> [Pos (ex+a, ey-a) | a <- [0..7], (a /= 0 || color == ecolor) && boardFilter (Pos (ex+a, ey-a))]
 
--- horizon pos@(px,py) color board = concatMap (\(dir, e) -> buildHorizonMoves dir pos color e) (firstElementByDirection pos board)
 forbiddenHorizon :: Pos -> PieceColor -> Board -> [Pos]
 forbiddenHorizon pos color board = concatMap (\(dir, e) -> forbiddenMoves dir pos color e) (firstElementByDirection pos board)
 

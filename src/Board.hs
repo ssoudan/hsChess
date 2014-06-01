@@ -1,8 +1,14 @@
+{-
+ Board.hs
+
+ Copyright (c) 2014 by Sebastien Soudan.  
+ Apache License Version 2.0, January 2004
+-}
 module Board where
 
 import           Data.List
 import           Data.Maybe (isJust)
-import           Utils
+import           Utils (applyAt)
 
 data PieceType = Rook | Knight | Bishop | King | Queen | Pawn deriving Eq
 data PieceColor = Black | White deriving Eq
@@ -110,8 +116,7 @@ evalBoardFor :: [Square] -> Int
 evalBoardFor x = sum $ map squareScore x
 
 isPiece :: Square -> Bool
-isPiece Nothing = False
-isPiece _ = True
+isPiece = isJust
 
 isBlack :: Square -> Bool
 isBlack (Just (Piece _ Black)) = True
@@ -124,18 +129,20 @@ evalBoard board = let blackScore = evalBoardFor blacks
                    in (blackScore - whiteScore)
                 where (blacks, whites) =  partition isBlack $ filter isPiece $ concat board
 
+-- | Apply function f on sqaure at position 'Pos (x,y)' of 'board'.
+-- Leave the rest unmodified.
 applyOnBoard :: (Square -> Square) -> Pos -> Board -> Board
 applyOnBoard f (Pos (x,y)) = applyAt (applyAt f y) x
 
+-- | Replace the piece at position 'pos' with the Piece 'piece' in 'board'.
 updateBoard :: Pos -> Square -> Board -> Board
 updateBoard pos piece = applyOnBoard (const piece) pos
 
+-- | Delete the piece at position 'pos' in a board and replace it with a Nothing.
 deleteSquare :: Pos -> Board -> Board
 deleteSquare pos = updateBoard pos Nothing
 
--- prettyBoard (updateBoard (3,3) (Just (Piece Bishop Black)) emptyBoard)
--- prettyBoard (deleteSquare (0,0) initialBoard)
-
+-- | Returns the 'square' of the 'board' that is a position the provided position 'Pos (x,y)'
 elementAt :: Pos -> Board -> Square
 elementAt (Pos (x,y)) board = (board!!x)!!y
 
