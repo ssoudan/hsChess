@@ -74,5 +74,5 @@ alternate f g a = a : alternate g f (f a)
 
 main :: IO [()]
 main = do
-        sequence $ map (putStr . showState) $ take 40 (alternate AB.doMove AB.doMove (State jeuOuvert "init" White))
+        sequence $ map (putStr . showState) $ take 5 (alternate AB.doMove AB.doMove (State jeuOuvert "init" White))
 

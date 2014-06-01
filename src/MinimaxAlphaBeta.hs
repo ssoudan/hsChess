@@ -30,19 +30,18 @@ initialBeta :: Int
 initialBeta = 100000
 
 minimax :: State -> Int -> Int -> Int -> Bool -> Int
-minimax (State cur _ _) 0 _ _ _ = evalBoard cur
+minimax state' 0 _ _ _ = evalBoard (current state')
 minimax state' depth' alpha' beta' b' = minimaxAux depth' alpha' beta' (nextStates state') b'
   where
     minimaxAux :: Int -> Int -> Int -> [State] -> Bool -> Int
-    minimaxAux _ alpha _ [] True = alpha
-    minimaxAux _ _ beta [] False = beta
-    minimaxAux depth alpha beta (x:xs) True = let alphaP = minimax x (depth-1) alpha beta False
+    minimaxAux _ alpha beta [] maximizingPlayer = if maximizingPlayer then alpha else beta
+    minimaxAux depth alpha beta (x:xs) True = let alphaP = minimax x (depth - 1) alpha beta False
                                                   alphaMax = max alphaP alpha
                                                in
                                                   if beta <= alphaMax
                                                   then alphaMax
                                                   else minimaxAux depth alphaMax beta xs True
-    minimaxAux depth alpha beta (x:xs) False = let betaP = minimax x (depth-1) alpha beta True
+    minimaxAux depth alpha beta (x:xs) False = let betaP = minimax x (depth - 1) alpha beta True
                                                    betaMin = min betaP beta
                                                 in
                                                    if betaMin <= alpha
@@ -57,6 +56,7 @@ compareOption :: (Int, State) -> (Int, State) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
 
 doMove :: State -> State
-doMove s = case s of
-                (State _ _ White) -> snd $ minimumBy compareOption ( map (`evalOption` True) (nextStates s))
-                (State _ _ Black) -> snd $ maximumBy compareOption ( map (`evalOption` False) (nextStates s))
+doMove s = case playerColor of
+                White -> snd $ minimumBy compareOption (map (`evalOption` True) (nextStates s))
+                Black -> snd $ maximumBy compareOption (map (`evalOption` False) (nextStates s))
+     where playerColor = player s

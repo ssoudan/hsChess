@@ -18,7 +18,7 @@ moves Rook   = [(x,0) | x <- [-7..7]] ++ [(0,y) | y <- [-7..7], y /= 0]
 moves Queen  = [(x,0) | x <- [-7..7]] ++ [(0,y) | y <- [-7..7], y /= 0] ++ [(y,y) | y <- [-7..7], y /= 0] ++ [(-y,y) | y <- [-7..7], y /= 0]
 moves Knight = [(1,2), (2,1), (1,-2), (-2,1), (-1,-2), (-2,-1), (-1,2), (2,-1)]
 moves Bishop = [(0,0)] ++ [(y,y) | y <- [-7..7], y /= 0] ++ [(-y,y) | y <- [-7..7], y /= 0]
-moves Pawn   = []
+moves Pawn   = [] -- Pawn move depend on the color and if it is their first move
 
 boardFilter :: Pos -> Bool
 boardFilter (Pos (x, y)) = x >= 0 && x <= 7 && y >= 0 && y <= 7
@@ -61,7 +61,6 @@ findElementsByDirection pos occupied = map (\d -> elementByDirection d pos occup
 
 firstElementByDirection :: Pos -> Board -> [(Direction, Maybe (Int, Int, Square))]
 firstElementByDirection pos board = zip [N,NE,E,SE,S,SW,W,NW] (map (listToMaybe . sortBy (orderPosition pos))  (findElementsByDirection pos (piecePosition board)))
--- :t firstElementByDirection
 
 forbiddenMoves :: Direction -> Pos -> PieceColor -> Maybe (Int, Int, Square) -> [Pos]
 forbiddenMoves _ _ _ Nothing = []
@@ -115,7 +114,15 @@ otherPlayer :: PieceColor -> PieceColor
 otherPlayer Black = White
 otherPlayer White = Black
 
-makePawnLegalMoves :: PieceColor -> Pos -> Board -> [Pos]
+-- | 'makePawnLegalMoves' generates the possible moves of a pawn depending on its position, 
+-- its color, and the positions of the other player
+-- 
+-- >>> makePawnLegalMoves Black (Pos (1,0)) initialBoard
+-- [Pos (2,0),Pos (3,0)]
+makePawnLegalMoves :: PieceColor  -- ^ The color of the pawn
+                      -> Pos      -- ^ The position of the pawn
+                      -> Board    -- ^ The board 
+                      -> [Pos]    -- ^ Returns the list of possible positions for this pawn
 makePawnLegalMoves color (Pos (px,py)) board = let otherPlayerPosition = colorPos (otherPlayer color) board
                                                    validMoves = case color of Black -> [Pos (px + a, py) | a <- [1,2], a /= 2 || px == 1]
                                                                               White -> [Pos (px - a, py) | a <- [1,2], a /= 2 || px == 6]
@@ -123,36 +130,43 @@ makePawnLegalMoves color (Pos (px,py)) board = let otherPlayerPosition = colorPo
                                                                             White -> [Pos (px - 1, py + 1), Pos (px - 1, py - 1)]
                                                 in [Pos (x,y) | (Pos (x,y)) <- (validMoves \\ otherPlayerPosition) ++ (optMoves `intersect` otherPlayerPosition), boardFilter (Pos (x, y))]
 
--- makePawnLegalMoves Black (1,0) initialBoard
-
+-- | 'genValidMoves' generates the possibles moves any piece on the board based on its legal 
+-- moves and the positions of the other pieces.
+--
+-- >>> let (newBoard, _) = (movePos (Pos (1,3)) (Pos (5,3)) initialBoard) in genValidMoves newBoard (Pos (5,3))
+-- [Pos (6,4),Pos (6,2)]
 genValidMoves :: Board -> Pos -> [Pos]
 genValidMoves board pos = let (Just (Piece pt color)) = elementAt pos board
                            in let opt = case pt of Pawn -> makePawnLegalMoves color pos board
                                                    _ -> filter boardFilter (movesAtPosition pos pt) \\ [pos]
                                   forbidden = case pt of Knight -> colorPos color board
-                                                         Pawn -> colorPos color board
+                                                         Pawn -> [] -- makePawnLegalMoves already excludes the position of the other player
                                                          King -> colorPos color board
                                                          Queen -> forbiddenHorizon pos color board
                                                          Rook -> forbiddenHorizon pos color board
                                                          Bishop -> forbiddenHorizon pos color board
                                in opt \\ forbidden
 
--- genValidMoves (movePos (1,3) (5,3) initialBoard) (5,3)
 
 genMoves :: Board -> Pos -> [BoardWithMove]
 genMoves board pos = map (\newpos -> movePos pos newpos board) $ genValidMoves board pos
 
--- :t genMoves
+-- genMoves initialBoard (Pos (1,0))
 
--- genMoves initialBoard (1,0)
-
-data State = State { current :: Board, move::String, player :: PieceColor }
+data State = State { current :: Board, move :: String, player :: PieceColor }
 
 instance Show State where
-    show (State cur m p) = "-> move: " ++ m ++ "\n-> player: " ++ show p ++ "\n" ++ "-> score: " ++ show (evalBoard cur) ++ "\n"
+    show (State cur m p) = "-> move: " ++ m 
+                      ++ "\n-> player: " ++ show p 
+                      ++ "\n-> score: " ++ show (evalBoard cur) 
+                      ++ "\n"
 
 showState :: State -> String
-showState (State cur m p) = "move: " ++ m ++ "\n" ++ prettyBoard cur ++ "\n-> player: " ++ show p ++ "\n" ++ "-> score: " ++ show (evalBoard cur) ++ "\n"
+showState (State cur m p) = "move: " ++ m 
+                       ++ "\n" ++ prettyBoard cur 
+                       ++ "\n-> player: " ++ show p 
+                       ++ "\n-> score: " ++ show (evalBoard cur) 
+                       ++ "\n"
 
 nextStates :: State -> [State]
 nextStates (State cur _ p) = let pieces = colorPos p cur

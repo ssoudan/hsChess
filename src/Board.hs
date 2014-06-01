@@ -15,28 +15,37 @@ type Board = [[Square]]
 newtype Pos = Pos (Int, Int) deriving (Eq, Show)
 
 instance Show PieceColor where
-    show Black = "B"
-    show White = "W"
+    show Black  = "B"
+    show White  = "W"
 
 instance Show PieceType where
-    show King = "K"
-    show Rook = "R"
-    show Queen = "Q"
+    show King   = "K"
+    show Rook   = "R"
+    show Queen  = "Q"
     show Knight = "N"
-    show Pawn = "P"
+    show Pawn   = "P"
     show Bishop = "B"
 
 prettyPrintPiece :: Piece -> String
-prettyPrintPiece (Piece p White) | p == King = "\x2654"| p == Queen = "\x2655"| p == Rook = "\x2656"| p == Bishop = "\x2657"| p == Knight = "\x2658"| p == Pawn = "\x2659"
-prettyPrintPiece (Piece p Black) | p == King = "\x265A"| p == Queen = "\x265B"| p == Rook = "\x265C"| p == Bishop = "\x265D"| p == Knight = "\x265E"| p == Pawn = "\x265F"
-prettyPrintPiece (Piece _ _) = "??"
+prettyPrintPiece (Piece p White) = case p of King -> "\x2654"
+                                             Queen -> "\x2655"
+                                             Rook -> "\x2656"
+                                             Bishop -> "\x2657"
+                                             Knight -> "\x2658"
+                                             Pawn -> "\x2659"
+prettyPrintPiece (Piece p Black) = case p of King -> "\x265A"
+                                             Queen -> "\x265B"
+                                             Rook -> "\x265C"
+                                             Bishop -> "\x265D"
+                                             Knight -> "\x265E"
+                                             Pawn -> "\x265F"
 
 instance Show Piece where
     show = prettyPrintPiece
 
 -- Just (Piece Rook Black)
 emptyBoard :: Board
-emptyBoard = [[Nothing | _ <- [1..8]] | _ <- [1..8]]
+emptyBoard = [[Nothing | _ <- [(1::Integer)..8]] | _ <- [(1::Integer)..8]]
 
 initialBoard :: Board
 initialBoard = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bishop Black), Just (Piece Queen Black), Just (Piece King Black), Just (Piece Bishop Black), Just (Piece Knight Black), Just (Piece Rook Black)],
@@ -66,7 +75,7 @@ prettySquare (Just p) = show p ++ " "
 prettyPrintLine :: [Square] -> String
 prettyPrintLine = foldr ((++) . prettySquare) []
 
-prettyBoard::Board->String
+prettyBoard :: Board -> String
 prettyBoard board = "  ---- B ----  \n" ++ unlines (map prettyPrintLine board) ++ "  ---- W ----  \n"
 
 -- putStr $ prettyBoard emptyBoard
@@ -97,10 +106,6 @@ squareScore Nothing = 0
 -- pieceColor (Piece King Black)
 
 
---evalBoardFor :: PieceColor -> Board -> Int
---evalBoardFor color x = sum $ map squareScore $ concatMap (filter (\p -> case p of Just (Piece _ c) -> c == color
---                                                                                  _ -> False)) x
-
 evalBoardFor :: [Square] -> Int
 evalBoardFor x = sum $ map squareScore x
 
@@ -111,6 +116,7 @@ isPiece _ = True
 isBlack :: Square -> Bool
 isBlack (Just (Piece _ Black)) = True
 isBlack (Just (Piece _ White)) = False
+isBlack Nothing = error "Not a piece"
 
 evalBoard :: Board -> Int
 evalBoard board = let blackScore = evalBoardFor blacks
@@ -142,6 +148,7 @@ nameMove :: Board -> Pos -> Square -> Pos -> String
 nameMove board _ (Just (Piece pt _)) destination = let destPiece = elementAt destination board
                                      in case destPiece of Nothing -> show pt ++ showPos destination
                                                           Just _ ->  show pt ++ "x" ++ showPos destination
+nameMove _ _ Nothing _ = "No piece to move"
 
 movePos :: Pos -> Pos -> Board -> BoardWithMove
 movePos origin destination board = let piece = elementAt origin board
