@@ -8,7 +8,7 @@ import           Data.Char
 
 --
 --  Grammar:
---  move: source destination
+--  move: source dst
 --
 --  source: row column
 --
@@ -22,11 +22,11 @@ import           Data.Char
 parseMove :: String -> Either ParseError Move
 parseMove = parse doParseMove "failed"
       where doParseMove = do
-                            sourceRow <- anyChar
-                            sourceColumn <- digit
-                            destinationRow <- anyChar
-                            destinationColumn <- digit
-                            return $ makeMove (Pos (colToInt sourceColumn, rowToInt sourceRow)) (Pos (colToInt destinationColumn, rowToInt destinationRow))            
+                            srcRow <- anyChar
+                            srcColumn <- digit
+                            dstRow <- anyChar
+                            dstColumn <- digit
+                            return $ makeMove (Pos (colToInt srcColumn, rowToInt srcRow)) (Pos (colToInt dstColumn, rowToInt dstRow))            
             rowToInt :: Char -> Int
             rowToInt x = (ord x) - 97
             colToInt :: Char -> Int

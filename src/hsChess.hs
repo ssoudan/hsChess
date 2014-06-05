@@ -7,7 +7,7 @@
 module Main where
 
 import           Board
-import           Minimax          as M
+--import           Minimax          as M
 import           MinimaxAlphaBeta as AB
 --import           MinimaxLazy      as ML
 import           InteractiveGame as Paul
@@ -72,12 +72,14 @@ Implement the function doMove::State->State, that choses the (best) next state.
 -}
 
 
-
 -- TODO:
---    - add manual strategy
---    - mate state detection
---    - stalemate detection
---    - check state detection and move selection
+--
+--    [√] add manual strategy
+--    [ ] improve UX
+--    [ ] mate state detection
+--    [ ] stalemate detection
+--    [ ] check state detection and move selection
+--    [ ] web or GUI
 
 
 alternate :: (a->a) -> (a->a) -> a -> [a]
@@ -85,9 +87,14 @@ alternate f g a = a : alternate g f (f a)
 
 playATurn :: State -> IO State
 playATurn state = do 
-                    s <- Paul.doMove state
-                    putStr $ showState s
-                    return s
+                    case (player state) of White -> do
+                                                      s' <- Paul.doMove state
+                                                      putStr $ showState s'
+                                                      return s'
+                                           Black -> do 
+                                                      s' <- return $ AB.doMove state
+                                                      putStr $ showState s'
+                                                      return s'
 
 playForEver :: State -> IO State
 playForEver state = do
@@ -95,6 +102,7 @@ playForEver state = do
                     nextState <- playForEver s
                     return nextState
 
+banner :: IO ()
 banner = do
             putStrLn ".................."
             putStrLn "hsChess - @ssoudan"

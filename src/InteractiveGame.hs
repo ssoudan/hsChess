@@ -6,9 +6,8 @@
 -}
 module InteractiveGame where
 
-import           Board
+import           Board (PieceColor)
 import           Data.List (intersperse)
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Move
 import           MoveParser (parseMove)
@@ -19,22 +18,26 @@ doMove s = do
               putStrLn $ "[II] " ++ show playerColor ++ " turn"
               putStrLn "[II] Possible moves: " 
               putStrLn . concat $ (intersperse " ") (map show allMoves)
-              move <- getLine -- get input (String)
-              playMove (parseMove move) s playerColor -- parse and play move if parsing succeeded
+              moveCommandInput <- getLine -- get input (String)
+              playMove (parseMove moveCommandInput) s -- parse and play move if parsing succeeded
      where 
+           playerColor :: PieceColor
            playerColor = player s
+           allMoves :: [Move]
            allMoves = genAllMoves s
+           validMove :: Move -> Bool
            validMove m = Set.member m (Set.fromList allMoves)
-           playMove move s playerColor = case move of (Left error) -> do 
-                                                                        putStrLn $ show error
-                                                                        putStrLn "[EE] Same player play again."
-                                                                        return s
-                                                      (Right m) -> do 
-                                                                    putStrLn $ show m
-                                                                    case (validMove m) of True -> do 
-                                                                                                   putStrLn $ "[II] Choosen move " ++ show m
-                                                                                                   return $ applyMove m s
-                                                                                          False -> do 
-                                                                                                    putStrLn "[EE] Invalid move!"
-                                                                                                    putStrLn "[EE] Same player play again."
-                                                                                                    return s
+           playMove :: Show a => (Either a Move) -> State -> IO State
+           playMove playerMove previousState = case playerMove of (Left msg) -> do 
+                                                                                    putStrLn $ show msg
+                                                                                    putStrLn "[EE] Same player play again."
+                                                                                    return previousState
+                                                                  (Right m) -> do 
+                                                                                 putStrLn $ show m
+                                                                                 case (validMove m) of True -> do 
+                                                                                                                 putStrLn $ "[II] Choosen move " ++ show m
+                                                                                                                 return $ applyMove m previousState
+                                                                                                       False -> do 
+                                                                                                                  putStrLn "[EE] Invalid move!"
+                                                                                                                  putStrLn "[EE] Same player play again."
+                                                                                                                  return previousState

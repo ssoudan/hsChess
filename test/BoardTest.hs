@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 {-
  BoardTest.hs
 
@@ -45,5 +47,5 @@ prop_deleteSquare pos = isNothing $ elementAt pos updatedBoard
 
 prop_movePos :: Pos -> Pos -> Bool
 prop_movePos origin destination = let originalBoard = initialBoard
-                                      (movedBoard, _) = movePos origin destination originalBoard
+                                      (movedBoard, _) = movePos originalBoard origin destination 
                                    in elementAt destination movedBoard == elementAt origin originalBoard && isNothing (elementAt origin movedBoard)
