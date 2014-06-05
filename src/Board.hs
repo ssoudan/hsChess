@@ -18,7 +18,10 @@ type Square = Maybe Piece
 
 type Board = [[Square]]
 
-newtype Pos = Pos (Int, Int) deriving (Eq, Show)
+newtype Pos = Pos (Int, Int) deriving (Show, Ord)
+
+instance Eq Pos where 
+    (Pos (a,b)) == (Pos (c,d)) = (a==c && b==d)
 
 instance Show PieceColor where
     show Black  = "B"
@@ -33,26 +36,27 @@ instance Show PieceType where
     show Bishop = "B"
 
 prettyPrintPiece :: Piece -> String
-prettyPrintPiece (Piece p White) = case p of King -> "\x2654"
-                                             Queen -> "\x2655"
-                                             Rook -> "\x2656"
-                                             Bishop -> "\x2657"
-                                             Knight -> "\x2658"
-                                             Pawn -> "\x2659"
-prettyPrintPiece (Piece p Black) = case p of King -> "\x265A"
-                                             Queen -> "\x265B"
-                                             Rook -> "\x265C"
-                                             Bishop -> "\x265D"
-                                             Knight -> "\x265E"
-                                             Pawn -> "\x265F"
+prettyPrintPiece (Piece p White) = case p of King -> "\x2654 "
+                                             Queen -> "\x2655 "
+                                             Rook -> "\x2656 "
+                                             Bishop -> "\x2657 "
+                                             Knight -> "\x2658 "
+                                             Pawn -> "\x2659 "
+prettyPrintPiece (Piece p Black) = case p of King -> "\x265A "
+                                             Queen -> "\x265B "
+                                             Rook -> "\x265C "
+                                             Bishop -> "\x265D "
+                                             Knight -> "\x265E "
+                                             Pawn -> "\x265F "
 
 instance Show Piece where
     show = prettyPrintPiece
 
--- Just (Piece Rook Black)
+-- | Create an 8x8 emptyBoard
 emptyBoard :: Board
 emptyBoard = [[Nothing | _ <- [(1::Integer)..8]] | _ <- [(1::Integer)..8]]
 
+-- | Create a 8x8 chess board ready to start
 initialBoard :: Board
 initialBoard = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bishop Black), Just (Piece Queen Black), Just (Piece King Black), Just (Piece Bishop Black), Just (Piece Knight Black), Just (Piece Rook Black)],
         [Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black)],
@@ -63,6 +67,7 @@ initialBoard = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece
         [Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
         [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece King White), Just (Piece Queen White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
 
+-- | Create a 8x8 chess board with a 'jeu ouvert' setup
 jeuOuvert :: Board
 jeuOuvert = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bishop Black), Just (Piece Queen Black), Just (Piece King Black), Just (Piece Bishop Black), Just (Piece Knight Black), Just (Piece Rook Black)],
         [Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black), Nothing, Just (Piece Pawn Black), Just (Piece Pawn Black), Just (Piece Pawn Black)],
@@ -73,18 +78,38 @@ jeuOuvert = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bi
         [Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Nothing, Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
         [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece King White), Just (Piece Queen White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
 
-
+-- | Pretty print a square
+--
+-- Use ". " for empty squares and the unicode character followed by a space for pieces.
+-- 
+-- >>> prettySquare (Just (Piece Rook Black))
+-- "\9820 "
+-- 
+-- >>> prettySquare Nothing
+-- ". "
+--
 prettySquare :: Square -> String
-prettySquare Nothing = ". "
-prettySquare (Just p) = show p ++ " "
+prettySquare = maybe ". " (show)
 
+-- | Pretty print a row of squares
 prettyPrintLine :: [Square] -> String
 prettyPrintLine = foldr ((++) . prettySquare) []
 
+-- | Pretty print a board
+-- 
+-- >>> prettyBoard initialBoard
+-- "  ---- B ----  \n\9820 \9822 \9821 \9819 \9818 \9821 \9822 \9820 \n\9823 \9823 ..."
+--
 prettyBoard :: Board -> String
-prettyBoard board = "  ---- B ----  \n" ++ unlines (map prettyPrintLine board) ++ "  ---- W ----  \n"
+prettyBoard board = "  ---- B ----  \n" 
+                 ++ unlines (map prettyPrintLine board) 
+                 ++ "  ---- W ----  \n"
 
--- putStr $ prettyBoard emptyBoard
+-- | Returns the value of a PieceType.
+--
+-- This is the center of our evaluation strategy.
+--
+-- TODO: definitively need to be improved
 valuePieceMap :: PieceType -> Int
 valuePieceMap King = 1000
 valuePieceMap Rook = 5
@@ -93,6 +118,7 @@ valuePieceMap Knight = 3
 valuePieceMap Pawn = 1
 valuePieceMap Bishop = 3
 
+-- | Returns the value of a Piece
 valuePiece :: Piece -> Int
 valuePiece = valuePieceMap . pieceType
 
@@ -100,20 +126,10 @@ instance Ord Piece where
   p1 `compare` p2 = valuePiece p1 `compare` valuePiece p2
 
 squareScore :: Square -> Int
-squareScore (Just piece) = valuePiece piece
-squareScore Nothing = 0
-
-
--- (Piece King Black) > (Piece Queen Black)
--- :t (fmap squareScore)
-
--- sum (map (sum . fmap squareScore) [[Nothing, Nothing], [Nothing, Just (Piece Knight Black)]])
-
--- pieceColor (Piece King Black)
-
+squareScore = maybe 0 valuePiece
 
 evalBoardFor :: [Square] -> Int
-evalBoardFor x = sum $ map squareScore x
+evalBoardFor = sum . (map squareScore)
 
 isPiece :: Square -> Bool
 isPiece = isJust
@@ -124,10 +140,10 @@ isBlack (Just (Piece _ White)) = False
 isBlack Nothing = error "Not a piece"
 
 evalBoard :: Board -> Int
-evalBoard board = let blackScore = evalBoardFor blacks
+evalBoard board = (blackScore - whiteScore)
+                where blackScore = evalBoardFor blacks
                       whiteScore = evalBoardFor whites
-                   in (blackScore - whiteScore)
-                where (blacks, whites) =  partition isBlack $ filter isPiece $ concat board
+                      (blacks, whites) = partition isBlack $ filter isPiece $ concat board
 
 -- | Apply function f on sqaure at position 'Pos (x,y)' of 'board'.
 -- Leave the rest unmodified.
@@ -152,19 +168,15 @@ showPos (Pos (x,y)) = (['a'..]!!y):show x
 type BoardWithMove = (Board, String)
 
 nameMove :: Board -> Pos -> Square -> Pos -> String
-nameMove board _ (Just (Piece pt _)) destination = let destPiece = elementAt destination board
-                                     in case destPiece of Nothing -> show pt ++ showPos destination
-                                                          Just _ ->  show pt ++ "x" ++ showPos destination
 nameMove _ _ Nothing _ = "No piece to move"
+nameMove board _ (Just (Piece pt _)) destination = let destPiece = elementAt destination board
+                                                    in case destPiece of Nothing -> show pt ++ showPos destination
+                                                                         Just _  -> show pt ++ "x" ++ showPos destination
 
-movePos :: Pos -> Pos -> Board -> BoardWithMove
-movePos origin destination board = let piece = elementAt origin board
+movePos :: Board -> Pos -> Pos -> BoardWithMove
+movePos board origin destination = let piece = elementAt origin board
                                        board' = deleteSquare origin board
                                     in (updateBoard destination piece board', nameMove board origin piece destination)
--- :t movePos
--- prettyBoard $ movePos (0,0) (2,0) initialBoard
--- distributeLabel :: (Int, [(a,b)]) -> [(Int, a, b)]
--- distributeLabel (l, xs) = map (\(y,e) -> (l, y, e)) xs
 
 piecePosition :: Board -> [(Int, Int, Square)]
 piecePosition board = [ (x,y,c) | (x, row) <- zip [0..] board, (y,c) <- zip [0..] row, isJust c ]

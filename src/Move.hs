@@ -74,38 +74,6 @@ forbiddenMoves dir (Pos (px,py)) color (Just (ex, ey, Just (Piece _ ecolor))) = 
 forbiddenHorizon :: Pos -> PieceColor -> Board -> [Pos]
 forbiddenHorizon pos color board = concatMap (\(dir, e) -> forbiddenMoves dir pos color e) (firstElementByDirection pos board)
 
--- forbiddenHorizon (7,0) Black initialBoard
--- forbiddenHorizon (7,2) White initialBoard
--- (movePos (6,0) (5,0) initialBoard)
-
--- [[Just ♜,Just ♞,Just ♝,Just ♛,Just ♚,Just ♝,Just ♞,Just ♜],
---  [Just ♟,Just ♟,Just ♟,Just ♟,Just ♟,Just ♟,Just ♟,Just ♟],
---  [Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing],
---  [Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing],
---  [Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing],
---  [Just ♙,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing],
---  [Nothing,Just ♙,Just ♙,Just ♙,Just ♙,Just ♙,Just ♙,Just ♙],
---  [Just ♖,Just ♘,Just ♗,Just ♔,Just ♕,Just ♗,Just ♘,Just ♖]]
-
--- firstElementByDirection (7,0) (movePos (6,0) (5,0) initialBoard)
--- [(N,Just (6,0,Nothing)),
---  (NE,Just (6,1,Just ♙)),
---  (E,Just (7,1,Just ♘)),
---  (SE,Nothing),
---  (S,Nothing),
---  (SW,Nothing),
---  (W,Nothing),
---  (NW,Nothing)]
-
--- (findElementsByDirection (7,0) (piecePosition (movePos (6,0) (5,0) initialBoard)))
--- N [[(0,0,Just ♜),(1,0,Just ♟),(2,0,Nothing),(3,0,Nothing),(4,0,Nothing),(5,0,Just ♙),(6,0,Nothing)],
--- NE [(0,7,Just ♜),(1,6,Just ♟),(2,5,Nothing),(3,4,Nothing),(4,3,Nothing),(5,2,Nothing),(6,1,Just ♙)],
--- ..  [(7,1,Just ♘),(7,2,Just ♗),(7,3,Just ♔),(7,4,Just ♕),(7,5,Just ♗),(7,6,Just ♘),(7,7,Just ♖)]
--- ..  ,[],[],[],[],[]]
-
-
--- firstElementByDirection (0,0) initialBoard
-
 otherPlayer :: PieceColor -> PieceColor
 otherPlayer Black = White
 otherPlayer White = Black
@@ -129,10 +97,10 @@ makePawnLegalMoves color (Pos (px,py)) board = let otherPlayerPosition = colorPo
 -- | 'genValidMoves' generates the possibles moves any piece on the board based on its legal 
 -- moves and the positions of the other pieces.
 --
--- >>> let (newBoard, _) = (movePos (Pos (1,3)) (Pos (5,3)) initialBoard) in genValidMoves newBoard (Pos (5,3))
+-- >>> let (newBoard, _) = (movePos initialBoard (Pos (1,3)) (Pos (5,3))) in genValidMoves (Pos (5,3)) newBoard
 -- [Pos (6,4),Pos (6,2)]
-genValidMoves :: Board -> Pos -> [Pos]
-genValidMoves board pos = let (Just (Piece pt color)) = elementAt pos board
+genValidMoves :: Pos -> Board -> [Pos]
+genValidMoves pos board = let (Just (Piece pt color)) = elementAt pos board
                            in let opt = case pt of Pawn -> makePawnLegalMoves color pos board
                                                    _ -> filter boardFilter (movesAtPosition pos pt) \\ [pos]
                                   forbidden = case pt of Knight -> colorPos color board
@@ -143,9 +111,16 @@ genValidMoves board pos = let (Just (Piece pt color)) = elementAt pos board
                                                          Bishop -> forbiddenHorizon pos color board
                                in opt \\ forbidden
 
+data Move = Move {source :: Pos, destination :: Pos} deriving (Ord)
 
-genMoves :: Board -> Pos -> [BoardWithMove]
-genMoves board pos = map (\newpos -> movePos pos newpos board) $ genValidMoves board pos
+instance Eq Move where 
+  m == n = (source m == source n && destination m == destination n)
+
+instance Show Move where
+  show m = showPos (source m) ++ "->" ++ showPos (destination m) 
+
+genMoves :: Pos -> Board -> [BoardWithMove]
+genMoves pos board = map (movePos board pos) $ genValidMoves pos board
 
 -- genMoves initialBoard (Pos (1,0))
 
@@ -164,8 +139,28 @@ showState (State cur m p) = "move: " ++ m
                        ++ "\n-> score: " ++ show (evalBoard cur) 
                        ++ "\n"
 
+-- | Generate all the possible next states for a turn.
+--
+-- TODO generate game state as well - stalemate, mate, checkmate
+-- TODO include 'prises en passant'
+--
 nextStates :: State -> [State]
 nextStates (State cur _ p) = let pieces = colorPos p cur
-                            in concatMap (\m -> [ State newboard notation (otherPlayer p) | (newboard, notation) <- genMoves cur m]) pieces
+                            in concatMap (\m -> [ State newboard notation (otherPlayer p) | (newboard, notation) <- genMoves m cur]) pieces
 
+applyMove :: Move -> State -> State
+applyMove m s = State (fst (movePos (current s) (source m) (destination m))) (show m) (otherPlayer (player s))
+
+-- | Create a new Move record
+makeMove :: Pos -> Pos -> Move
+makeMove origin dest = Move origin dest
+
+-- | Generate all the possible moves
+--
+-- TODO use this methode to implement nextStates
+--
+genAllMoves :: State -> [Move]
+genAllMoves state = let board = current state
+                        pieces = colorPos (player state) board
+                     in concatMap (\pos -> map (makeMove pos) (genValidMoves pos board)) pieces
 

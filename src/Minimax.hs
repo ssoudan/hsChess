@@ -8,7 +8,6 @@ module Minimax where
 
 import           Board
 import           Data.List
-import           Debug.Trace
 import           Move
 
 data GameTree = GameTree {state::State, gameTree::[GameTree]} deriving Show
@@ -28,7 +27,6 @@ buildGameTree depth s = let states = nextStates s
 
 compareGT :: GameTree -> GameTree -> Ordering
 compareGT s1 s2 = play s1 `compare` play s2
-
 
 compareOption :: (Int, GameTree) -> (Int, GameTree) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2

@@ -1,4 +1,6 @@
 hsChess
 =======
 
-Let see how it goes
+This is a basic implementation of a chess playing program in Haskell.
+
+
