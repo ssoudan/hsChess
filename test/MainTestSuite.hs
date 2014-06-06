@@ -26,7 +26,7 @@ tests =
        , testProperty "elementAt" prop_elementAt3
        , testProperty "valuePiece" prop_valuePiece
        , testProperty "deleteSquare" prop_deleteSquare
-       , testProperty "movePos" prop_movePos
+       , testProperty "movePieceOnBoard" prop_movePieceOnBoard
     ]
     --,    
     --testGroup "Move"

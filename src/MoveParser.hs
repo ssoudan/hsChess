@@ -1,10 +1,16 @@
+{-
+ MoveParser.hs
+
+ Copyright (c) 2014 by Sebastien Soudan.  
+ Apache License Version 2.0, January 2004
+-}
 module MoveParser where
 
-import           Board                              (Pos(..))
-import           Move                               (Move, makeMove)
+import           Board                         (Pos (..))
+import           Move                          (Move, makeMove)
 
-import           Text.ParserCombinators.Parsec
 import           Data.Char
+import           Text.ParserCombinators.Parsec
 
 --
 --  Grammar:
@@ -26,10 +32,10 @@ parseMove = parse doParseMove "failed"
                             srcColumn <- digit
                             dstRow <- anyChar
                             dstColumn <- digit
-                            return $ makeMove (Pos (colToInt srcColumn, rowToInt srcRow)) (Pos (colToInt dstColumn, rowToInt dstRow))            
+                            return $ makeMove (Pos (colToInt srcColumn, rowToInt srcRow)) (Pos (colToInt dstColumn, rowToInt dstRow))
             rowToInt :: Char -> Int
             rowToInt x = (ord x) - 97
             colToInt :: Char -> Int
-            colToInt = digitToInt 
+            colToInt = digitToInt
 
 

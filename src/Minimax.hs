@@ -1,22 +1,23 @@
 {-
  Minimax.hs
 
- Copyright (c) 2014 by Sebastien Soudan.  
+ Copyright (c) 2014 by Sebastien Soudan.
  Apache License Version 2.0, January 2004
 -}
 module Minimax where
 
-import           Board
+import           Board     (PieceColor(..))
 import           Data.List
-import           Move
+import           State
 
-data GameTree = GameTree {state::State, gameTree::[GameTree]} deriving Show
+data GameTree = GameTree { getState :: State, getGameTree :: [GameTree]} deriving Show
 
 play :: GameTree->Int
-play gt@(GameTree (State _ _ p) _) = play_aux (p == Black) gt where
-                  play_aux _ (GameTree (State c _ _) []) = evalBoard c
-                  play_aux True (GameTree _ xs) = maximum (map (play_aux False) xs)
-                  play_aux False (GameTree _ xs) = minimum (map (play_aux True) xs)
+play gt = play_aux (Black == getPlayer (getState gt)) gt 
+      where
+          play_aux _ (GameTree state' []) = evalState state'
+          play_aux True (GameTree _ xs) = maximum (map (play_aux False) xs)
+          play_aux False (GameTree _ xs) = minimum (map (play_aux True) xs)
 
 buildGameTree :: Int -> State -> GameTree
 buildGameTree 0 s = GameTree s []
@@ -32,9 +33,9 @@ compareOption :: (Int, GameTree) -> (Int, GameTree) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
 
 doMove :: State -> State
-doMove s@(State _ _ p) = case p of Black -> state (snd (maximumBy compareOption options))
-                                   White -> state (snd (minimumBy compareOption options))
-                   where gt = gameTree $ buildGameTree 4 s
+doMove state = case (getPlayer state) of Black -> getState (snd (maximumBy compareOption options))
+                                         White -> getState (snd (minimumBy compareOption options))
+                   where gt = getGameTree $ buildGameTree 4 state
                          doPlay = \g -> (play g, g)
                          options = map doPlay gt
 

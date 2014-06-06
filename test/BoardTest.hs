@@ -45,7 +45,7 @@ prop_deleteSquare pos = isNothing $ elementAt pos updatedBoard
                        where
                              updatedBoard = deleteSquare pos initialBoard
 
-prop_movePos :: Pos -> Pos -> Bool
-prop_movePos origin destination = let originalBoard = initialBoard
-                                      (movedBoard, _) = movePos originalBoard origin destination 
+prop_movePieceOnBoard :: Pos -> Pos -> Bool
+prop_movePieceOnBoard origin destination = let originalBoard = initialBoard
+                                               movedBoard = movePieceOnBoard originalBoard origin destination 
                                    in elementAt destination movedBoard == elementAt origin originalBoard && isNothing (elementAt origin movedBoard)

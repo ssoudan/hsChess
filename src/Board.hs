@@ -24,8 +24,12 @@ instance Eq Pos where
     (Pos (a,b)) == (Pos (c,d)) = (a==c && b==d)
 
 instance Show PieceColor where
-    show Black  = "B"
-    show White  = "W"
+    show Black  = "Black"
+    show White  = "White"
+
+otherPlayer :: PieceColor -> PieceColor
+otherPlayer Black = White
+otherPlayer White = Black
 
 instance Show PieceType where
     show King   = "K"
@@ -101,9 +105,14 @@ prettyPrintLine = foldr ((++) . prettySquare) []
 -- "  ---- B ----  \n\9820 \9822 \9821 \9819 \9818 \9821 \9822 \9820 \n\9823 \9823 ..."
 --
 prettyBoard :: Board -> String
-prettyBoard board = "  ---- B ----  \n" 
-                 ++ unlines (map prettyPrintLine board) 
-                 ++ "  ---- W ----  \n"
+prettyBoard board = "     ---- B ----  \n" 
+                 ++ "   a b c d e f g h\n" 
+                 ++ "  \x250c\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2510\n"
+                 ++ unlines (map (\(row, line) -> (show row) ++ " " ++ line) (zip [0..7::Int] ( map (wrap . prettyPrintLine) board )))
+                 ++ "  \x2514\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2518\n"
+                 ++ "   a b c d e f g h\n" 
+                 ++ "     ---- W ----  \n"
+        where wrap s = "\x2502" ++ s ++ "\x2502"
 
 -- | Returns the value of a PieceType.
 --
@@ -165,18 +174,16 @@ elementAt (Pos (x,y)) board = (board!!x)!!y
 showPos :: Pos -> String
 showPos (Pos (x,y)) = (['a'..]!!y):show x
 
-type BoardWithMove = (Board, String)
-
 nameMove :: Board -> Pos -> Square -> Pos -> String
 nameMove _ _ Nothing _ = "No piece to move"
 nameMove board _ (Just (Piece pt _)) destination = let destPiece = elementAt destination board
                                                     in case destPiece of Nothing -> show pt ++ showPos destination
                                                                          Just _  -> show pt ++ "x" ++ showPos destination
 
-movePos :: Board -> Pos -> Pos -> BoardWithMove
-movePos board origin destination = let piece = elementAt origin board
-                                       board' = deleteSquare origin board
-                                    in (updateBoard destination piece board', nameMove board origin piece destination)
+movePieceOnBoard :: Board -> Pos -> Pos -> Board
+movePieceOnBoard board origin destination = let piece = elementAt origin board
+                                                board' = deleteSquare origin board
+                                             in updateBoard destination piece board'
 
 piecePosition :: Board -> [(Int, Int, Square)]
 piecePosition board = [ (x,y,c) | (x, row) <- zip [0..] board, (y,c) <- zip [0..] row, isJust c ]

@@ -1,14 +1,14 @@
 {-
  MinimaxAlphaBeta.hs
 
- Copyright (c) 2014 by Sebastien Soudan.  
+ Copyright (c) 2014 by Sebastien Soudan.
  Apache License Version 2.0, January 2004
 -}
 module MinimaxAlphaBeta where
 
-import           Board
+import           Board     (PieceColor (..))
 import           Data.List
-import           Move
+import           State
 
 -- from wikipedia [http://en.wikipedia.org/wiki/Alpha-beta_pruning]
 
@@ -36,7 +36,7 @@ initialBeta :: Int
 initialBeta = 100000
 
 minimax :: State -> Int -> Int -> Int -> Bool -> Int
-minimax state' 0 _ _ _ = evalBoard (current state')
+minimax state' 0 _ _ _ = evalState state'
 minimax state' depth' alpha' beta' b' = minimaxAux depth' alpha' beta' (nextStates state') b'
   where
     minimaxAux :: Int -> Int -> Int -> [State] -> Bool -> Int
@@ -65,4 +65,4 @@ doMove :: State -> State
 doMove s = case playerColor of
                 White -> snd $ minimumBy compareOption (map (`evalOption` True) (nextStates s))
                 Black -> snd $ maximumBy compareOption (map (`evalOption` False) (nextStates s))
-     where playerColor = player s
+     where playerColor = getPlayer s
