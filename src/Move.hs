@@ -94,14 +94,14 @@ makePawnLegalMoves color (Pos (px,py)) board = let otherPlayerPosition = colorPo
 data Move = Move {source :: Pos, destination :: Pos} deriving (Ord)
 
 instance Eq Move where
-  m == n = (source m == source n && destination m == destination n)
+  m == n = source m == source n && destination m == destination n
 
 instance Show Move where
   show m = showPos (source m) ++ "->" ++ showPos (destination m)
 
 -- | Create a new Move record
 makeMove :: Pos -> Pos -> Move
-makeMove origin dest = Move origin dest
+makeMove = Move 
 
 -- | 'genValidMoves' generates the possibles moves any piece on the board based on its legal
 -- moves and the positions of the other pieces.

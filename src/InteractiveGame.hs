@@ -4,7 +4,7 @@
  Copyright (c) 2014 by Sebastien Soudan.
  Apache License Version 2.0, January 2004
 -}
-module InteractiveGame where
+module InteractiveGame (doMove) where
 
 import           Board      (PieceColor)
 import qualified Data.Set   as Set
@@ -27,16 +27,15 @@ doMove s = do
            allMoves = genAllMoves s
            validMove :: Move -> Bool
            validMove m = Set.member m (Set.fromList allMoves)
-           playMove :: Show a => (Either a Move) -> State -> IO State
+           playMove :: Show a => Either a Move -> State -> IO State
            playMove playerMove previousState = case playerMove of (Left msg) -> do
-                                                                                    putStrLn $ show msg
+                                                                                    print msg
                                                                                     putStrLn "[EE] Same player play again."
                                                                                     return previousState
-                                                                  (Right m) -> do
-                                                                                 case (validMove m) of True -> do
-                                                                                                                 putStrLn $ "[II] Choosen move for " ++ show (getPlayer previousState) ++ ": " ++ show m
-                                                                                                                 return $ applyMove m previousState
-                                                                                                       False -> do
-                                                                                                                  putStrLn "[EE] Invalid move!"
-                                                                                                                  putStrLn "[EE] Same player play again."
-                                                                                                                  return previousState
+                                                                  (Right m) -> if validMove m then (do
+                                                                                                      putStrLn $ "[II] Choosen move for " ++ show (getPlayer previousState) ++ ": " ++ show m
+                                                                                                      return $ applyMove m previousState)
+                                                                                              else (do
+                                                                                                      putStrLn "[EE] Invalid move!"
+                                                                                                      putStrLn "[EE] Same player play again."
+                                                                                                      return previousState)

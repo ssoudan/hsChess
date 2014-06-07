@@ -6,7 +6,7 @@
 -}
 module Main where
 
-import           Board
+import           Board            (PieceColor (..), initialBoard)
 import           InteractiveGame  as Paul
 import           Minimax          as M
 import           MinimaxAlphaBeta as AB
@@ -76,24 +76,25 @@ Implement the function doMove::State->State, that choses the (best) next state.
 --
 --    [√] add manual strategy
 --    [√] improve UX
---    [ ] mate state detection
+--    [ ] store the history in the State rather than the latest state (using DiffList)
+--    [ ] mate detection
 --    [ ] stalemate detection
 --    [ ] check state detection and move selection
 --    [ ] web or GUI
 
-
-alternate :: (a->a) -> (a->a) -> a -> [a]
-alternate f g a = a : alternate g f (f a)
-
+-- | Play a turn based on the options that have been provided.
+--
+-- Basically, White player is a human player
+-- Black player is an AI. You can select the one that will be used.
+-- And as a human player, you can also have an AI that tell you what it would have played after you did it - yeah that's evil.
 playATurn :: Options -> State -> IO State
-playATurn options state = do
-                            case (getPlayer state) of White -> do
+playATurn options state = case getPlayer state of White -> do
                                                               s' <- whiteStrategy state
                                                               assistantStrategy state
                                                               putStr $ show s'
                                                               return s'
-                                                      Black -> do
-                                                              s' <- return $ blackStrategy state
+                                                  Black -> do
+                                                              let s' = blackStrategy state
                                                               putStr $ show s'
                                                               return s'
                   where (assistantOption, opponentOption) = options
@@ -102,28 +103,42 @@ playATurn options state = do
                                                                AB -> AB.doMove
                                                                M -> M.doMove
                         assistantStrategy s = case assistantOption of AssistedML -> do
-                                                                                      putStrLn "[ML] Thinking to what I would have played..." 
+                                                                                      putStrLn "[ML] Thinking to what I would have played..."
                                                                                       (print . ML.doMove) s
-                                                                                      putStrLn "[ML] But you played:" 
+                                                                                      putStrLn "[ML] But you played:"
 
                                                                       AssistedAB -> do
                                                                                       putStrLn "[AB] Thinking to what I would have played..."
                                                                                       (print . AB.doMove) s
-                                                                                      putStrLn "[AB] But you played:" 
+                                                                                      putStrLn "[AB] But you played:"
                                                                       AssistedM -> do
                                                                                      putStrLn "[M] Thinking to what I would have played..."
                                                                                      (print . M.doMove) s
-                                                                                     putStrLn "[M] But you played:" 
-                                                                      NotAssisted -> (const (return ())) s
+                                                                                     putStrLn "[M] But you played:"
+                                                                      NotAssisted -> return ()
 
 
-
+-- | Play the game for ever
+--
+-- TODO need to consider the end of game...
+--
 playForEver :: Options -> State -> IO State
 playForEver options state = do
                               s <- playATurn options state
-                              nextState <- playForEver options s
-                              return nextState
+                              playForEver options s
 
+-- | Play a predefined number of turns.
+--
+-- Essentially used for benchmarking
+--
+playForNTurns :: Int -> Options -> State -> IO State
+playForNTurns 0 _ state = return state
+playForNTurns n options state = do
+                                 s <- playATurn options state
+                                 playForNTurns (n-1) options s
+
+
+-- | Banner display function
 banner :: IO ()
 banner = do
            putStrLn "                                                  "
@@ -134,6 +149,13 @@ banner = do
            putStrLn "                                       - @ssoudan "
            putStrLn "                                                  "
 
+
+data AssistantOption = NotAssisted | AssistedM | AssistedML | AssistedAB deriving (Eq, Show, Read)
+data OpponentOption = M | ML | AB deriving (Eq, Show, Read)
+
+type Options = (AssistantOption, OpponentOption)
+
+-- | Interactive function to get the 'Option's.
 getOptions :: IO Options
 getOptions = do
                putStrLn "Assistant options are: "
@@ -143,26 +165,22 @@ getOptions = do
                putStrLn " * AssistedAB: show the the AB strategy would have played"
                putStrLn "Which one do you want?"
                assistantOption <- getLine
-
-
                putStrLn " * M: play against the M strategy"
                putStrLn " * ML: play against the M strategy"
                putStrLn " * AB: play against the M strategy"
                putStrLn "Which one do you want to be defeated by?"
                opponentOption <- getLine
-               return ((read assistantOption) :: AssistantOption, (read opponentOption) :: OpponentOption)
+               return (read assistantOption :: AssistantOption, read opponentOption :: OpponentOption)
 
+-- | Main method !
 main :: IO ()
 main = do
         banner
         options <- getOptions
-        let initState = State jeuOuvert "init" White
+        --let options = (NotAssisted, AB)
+        let initState = State initialBoard "init" White
         putStr $ show initState
+        --endState <- playForNTurns 4 options initState
         endState <- playForEver options initState
         putStr $ show endState
 
-
-data AssistantOption = NotAssisted | AssistedM | AssistedML | AssistedAB deriving (Eq, Show, Read)
-data OpponentOption = M | ML | AB deriving (Eq, Show, Read)
-
-type Options = (AssistantOption, OpponentOption)

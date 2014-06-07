@@ -25,6 +25,9 @@ import           Text.ParserCombinators.Parsec
 --  column: [0-7]
 --
 
+-- | Parser a 'Move' from a 'String'
+-- Note that it returns an Either. 
+-- The Move is in the Right, the error in the Left -- this is not a political statement.
 parseMove :: String -> Either ParseError Move
 parseMove = parse doParseMove "failed"
       where doParseMove = do
@@ -34,7 +37,7 @@ parseMove = parse doParseMove "failed"
                             dstColumn <- digit
                             return $ makeMove (Pos (colToInt srcColumn, rowToInt srcRow)) (Pos (colToInt dstColumn, rowToInt dstRow))
             rowToInt :: Char -> Int
-            rowToInt x = (ord x) - 97
+            rowToInt x = ord x - 97
             colToInt :: Char -> Int
             colToInt = digitToInt
 

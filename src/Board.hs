@@ -21,7 +21,7 @@ type Board = [[Square]]
 newtype Pos = Pos (Int, Int) deriving (Show, Ord)
 
 instance Eq Pos where 
-    (Pos (a,b)) == (Pos (c,d)) = (a==c && b==d)
+    (Pos (a,b)) == (Pos (c,d)) = a==c && b==d
 
 instance Show PieceColor where
     show Black  = "Black"
@@ -93,7 +93,7 @@ jeuOuvert = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bi
 -- ". "
 --
 prettySquare :: Square -> String
-prettySquare = maybe ". " (show)
+prettySquare = maybe ". " show
 
 -- | Pretty print a row of squares
 prettyPrintLine :: [Square] -> String
@@ -108,7 +108,7 @@ prettyBoard :: Board -> String
 prettyBoard board = "     ---- B ----  \n" 
                  ++ "   a b c d e f g h\n" 
                  ++ "  \x250c\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2510\n"
-                 ++ unlines (map (\(row, line) -> (show row) ++ " " ++ line) (zip [0..7::Int] ( map (wrap . prettyPrintLine) board )))
+                 ++ unlines (map (\(row, line) -> show row ++ " " ++ line) (zip [0..7::Int] ( map (wrap . prettyPrintLine) board )))
                  ++ "  \x2514\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2500\x2518\n"
                  ++ "   a b c d e f g h\n" 
                  ++ "     ---- W ----  \n"
@@ -138,7 +138,7 @@ squareScore :: Square -> Int
 squareScore = maybe 0 valuePiece
 
 evalBoardFor :: [Square] -> Int
-evalBoardFor = sum . (map squareScore)
+evalBoardFor = sum . map squareScore
 
 isPiece :: Square -> Bool
 isPiece = isJust
@@ -149,12 +149,12 @@ isBlack (Just (Piece _ White)) = False
 isBlack Nothing = error "Not a piece"
 
 evalBoard :: Board -> Int
-evalBoard board = (blackScore - whiteScore)
+evalBoard board = blackScore - whiteScore
                 where blackScore = evalBoardFor blacks
                       whiteScore = evalBoardFor whites
                       (blacks, whites) = partition isBlack $ filter isPiece $ concat board
 
--- | Apply function f on sqaure at position 'Pos (x,y)' of 'board'.
+-- | Apply function f on square at position 'Pos (x,y)' of 'board'.
 -- Leave the rest unmodified.
 applyOnBoard :: (Square -> Square) -> Pos -> Board -> Board
 applyOnBoard f (Pos (x,y)) = applyAt (applyAt f y) x
