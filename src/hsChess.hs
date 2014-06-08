@@ -7,6 +7,7 @@
 module Main where
 
 import           Board            (PieceColor (..), initialBoard)
+import           Data.Maybe       (fromMaybe)
 import           InteractiveGame  as Paul
 import           Minimax          as M
 import           MinimaxAlphaBeta as AB
@@ -97,7 +98,7 @@ playATurn options state = case getPlayer state of White -> do
                                                               let s' = blackStrategy state
                                                               putStr $ show s'
                                                               return s'
-                  where (assistantOption, opponentOption) = options
+                  where (assistantOption, opponentOption) = (fromMaybe NotAssisted $ fst options, fromMaybe AB $ snd options)
                         whiteStrategy = Paul.doMove
                         blackStrategy = case opponentOption of ML -> ML.doMove
                                                                AB -> AB.doMove
@@ -153,7 +154,12 @@ banner = do
 data AssistantOption = NotAssisted | AssistedM | AssistedML | AssistedAB deriving (Eq, Show, Read)
 data OpponentOption = M | ML | AB deriving (Eq, Show, Read)
 
-type Options = (AssistantOption, OpponentOption)
+type Options = (Maybe AssistantOption, Maybe OpponentOption)
+
+readMaybe :: (Read a) => String -> Maybe a
+readMaybe s = case reads s of
+              [(x, "")] -> Just x
+              _ -> Nothing
 
 -- | Interactive function to get the 'Option's.
 getOptions :: IO Options
@@ -165,12 +171,12 @@ getOptions = do
                putStrLn " * AssistedAB: show the the AB strategy would have played"
                putStrLn "Which one do you want?"
                assistantOption <- getLine
-               putStrLn " * M: play against the M strategy"
-               putStrLn " * ML: play against the M strategy"
-               putStrLn " * AB: play against the M strategy"
+               putStrLn " * M: play against the Minimax strategy"
+               putStrLn " * ML: play against the MinimaxLazy strategy"
+               putStrLn " * AB: play against the AlphaBeta strategy"
                putStrLn "Which one do you want to be defeated by?"
                opponentOption <- getLine
-               return (read assistantOption :: AssistantOption, read opponentOption :: OpponentOption)
+               return (readMaybe assistantOption :: Maybe AssistantOption, readMaybe opponentOption :: Maybe OpponentOption)
 
 -- | Main method !
 main :: IO ()

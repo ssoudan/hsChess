@@ -118,7 +118,6 @@ prettyBoard board = "     ---- B ----  \n"
 --
 -- This is the center of our evaluation strategy.
 --
--- TODO: definitively need to be improved
 valuePieceMap :: PieceType -> Int
 valuePieceMap King = 1000
 valuePieceMap Rook = 5
@@ -134,25 +133,32 @@ valuePiece = valuePieceMap . pieceType
 instance Ord Piece where
   p1 `compare` p2 = valuePiece p1 `compare` valuePiece p2
 
-squareScore :: Square -> Int
-squareScore = maybe 0 valuePiece
-
+-- | evaluate the value of an army by suming the value of its pieces.
 evalBoardFor :: [Square] -> Int
 evalBoardFor = sum . map squareScore
+       where 
+            squareScore :: Square -> Int
+            squareScore = maybe 0 valuePiece
 
-isPiece :: Square -> Bool
-isPiece = isJust
-
+-- | Returns 'True' if the piece in the square is 'Black', 'False' if the piece
+-- is White, and an error if there is no piece.
 isBlack :: Square -> Bool
 isBlack (Just (Piece _ Black)) = True
 isBlack (Just (Piece _ White)) = False
 isBlack Nothing = error "Not a piece"
 
+-- | eval a 'Board' to an 'Int'.
+--
+-- We consider chess as a zero-sum game. 
+-- The evaluation of a board is the score of the Black minus the score of the White
+-- where the score of a player is defined in 'evalBoardFor' which compute sum of the value
+-- of its army.
+--
 evalBoard :: Board -> Int
 evalBoard board = blackScore - whiteScore
                 where blackScore = evalBoardFor blacks
                       whiteScore = evalBoardFor whites
-                      (blacks, whites) = partition isBlack $ filter isPiece $ concat board
+                      (blacks, whites) = partition isBlack $ filter isJust $ concat board
 
 -- | Apply function f on square at position 'Pos (x,y)' of 'board'.
 -- Leave the rest unmodified.
@@ -180,11 +186,13 @@ nameMove board _ (Just (Piece pt _)) destination = let destPiece = elementAt des
                                                     in case destPiece of Nothing -> show pt ++ showPos destination
                                                                          Just _  -> show pt ++ "x" ++ showPos destination
 
+-- | Move a piece on the 'Board' from one 'Pos' to another.
 movePieceOnBoard :: Board -> Pos -> Pos -> Board
 movePieceOnBoard board origin destination = let piece = elementAt origin board
                                                 board' = deleteSquare origin board
                                              in updateBoard destination piece board'
 
+-- | Returns a list of 3-uple with (column, row, 'Square') for each non-empty Square of the board.
 piecePosition :: Board -> [(Int, Int, Square)]
 piecePosition board = [ (x,y,c) | (x, row) <- zip [0..] board, (y,c) <- zip [0..] row, isJust c ]
 
