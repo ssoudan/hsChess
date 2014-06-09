@@ -8,15 +8,18 @@ module State where
 
 import           Board (Board, PieceColor, evalBoard, otherPlayer, prettyBoard)
 import           Move
+import           History
+import           Data.List(intersperse)
 
-data State = State { getCurrent :: Board, getMove :: String, getPlayer :: PieceColor }
+data State = State { getCurrent :: Board, getHistory :: History, getPlayer :: PieceColor }
 
 instance Show State where
-    show (State cur m p) = "-> move: " ++ m
-                      ++ "\n" ++ prettyBoard cur
-                      ++ "\n-> player: " ++ show p
-                      ++ "\n-> score: " ++ show (evalBoard cur)
+    show state = "-> moves: \n\t" ++ concat (intersperse ", \n\t" (historyToList (getHistory state)))
+                      ++ "\n" ++ prettyBoard currentBoard
+                      ++ "\n-> player: " ++ show (getPlayer state)
+                      ++ "\n-> score: " ++ show (evalBoard currentBoard)
                       ++ "\n"
+        where currentBoard = getCurrent state
 
 -- | Generate all the possible next states for a turn.
 --
@@ -25,21 +28,21 @@ instance Show State where
 -- TODO include 'prises en passant'
 --
 nextStates :: State -> [State]
-nextStates (State cur _ p) = let pieces = colorPos p cur
-                            in concatMap (\m -> [ State newboard (show move) (otherPlayer p) | (newboard, move) <- genMoves m cur]) pieces
+nextStates (State cur history p) = let pieces = colorPos p cur
+                            in concatMap (\m -> [ State newboard (appendHistory history move) (otherPlayer p) | (newboard, move) <- genMoves m cur]) pieces
 
 -- | Apply a 'Move' to a 'State' to generate another 'State'
 --
--- The new 'State' contains the representation of the last move that lead to it.
---
--- TODO store the move history in the State.
+-- The new 'State' contains the representation of all the moves that lead to this state.
 -- 
 applyMove :: Move -> State -> State
-applyMove m s = State (applyMoveOnBoard (getCurrent s) m) (show m) (otherPlayer (getPlayer s))
+applyMove m s = State (applyMoveOnBoard (getCurrent s) m) 
+                      (appendHistory (getHistory s) m) 
+                      (otherPlayer (getPlayer s))
 
 -- | Generate all the possible moves
 --
--- TODO use this methode to implement nextStates
+-- TODO use this method to implement nextStates
 --
 genAllMoves :: State -> [Move]
 genAllMoves state = let board = getCurrent state

@@ -15,7 +15,7 @@
 -- This implementation is slower than the one of "Minimax" but faster than "MinimaxLazy"
 --
 -- See also "Minimax", "MinimaxLazy"
-module MinimaxAlphaBeta where
+module MinimaxAlphaBeta (doMove) where
 
 import           Board     (PieceColor (..))
 import           Data.List

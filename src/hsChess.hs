@@ -8,6 +8,7 @@ module Main where
 
 import           Board            (PieceColor (..), initialBoard)
 import           Data.Maybe       (fromMaybe)
+import           History
 import           InteractiveGame  as Paul
 import           Minimax          as M
 import           MinimaxAlphaBeta as AB
@@ -77,7 +78,9 @@ Implement the function doMove::State->State, that choses the (best) next state.
 --
 --    [√] add manual strategy
 --    [√] improve UX
---    [ ] store the history in the State rather than the latest state (using DiffList)
+--    [√] Mac packaging
+--    [ ] parallelize the move evalution
+--    [√] store the history in the State rather than the latest state (using DList)
 --    [ ] mate detection
 --    [ ] stalemate detection
 --    [ ] check state detection and move selection
@@ -184,7 +187,7 @@ main = do
         banner
         options <- getOptions
         --let options = (NotAssisted, AB)
-        let initState = State initialBoard "init" White
+        let initState = State initialBoard newHistory White
         putStr $ show initState
         --endState <- playForNTurns 4 options initState
         endState <- playForEver options initState
