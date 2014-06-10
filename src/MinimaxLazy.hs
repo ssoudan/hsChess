@@ -66,8 +66,9 @@ compareOption (s1,_) (s2,_) = s1 `compare` s2
 
 -- | Select the next move based on the minimax algorithm and the 'evalOption'/'compareOption' 'State' comparison functions.
 -- 
--- >>> doMove (State Board.initialBoard "" White)
--- -> move: a6->a5
+-- >>> doMove (State Board.initialBoard History.newHistory White)
+-- -> move: 
+--     a6->a5
 --      ---- B ----  
 --    a b c d e f g h
 --   ┌────────────────┐

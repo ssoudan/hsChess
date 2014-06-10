@@ -128,12 +128,3 @@ genValidMoves origin board = let (Just (Piece pt color)) = elementAt origin boar
 applyMoveOnBoard :: Board -> Move -> Board
 applyMoveOnBoard board move = movePieceOnBoard board (source move) (destination move)
 
--- | Generate all the possible board from the move out of the move of a piece in on particular position
---
--- >>> genMoves (Pos (1,0)) initialBoard
--- [([[Just ♜ ,Just ♞ ,Just ♝ ,Just ♛ ,Just ♚ ,Just ♝ ,Just ♞ ,Just ♜ ],[Nothing,Just ♟ ,Just ♟ ,Just ♟ ,Just ♟ ,Just ♟ ,Just ♟ ,Just ♟ ],[Just ♟ ...
---
-genMoves :: Pos -> Board -> [(Board, Move)]
-genMoves origin board = map (\ move -> (applyMoveOnBoard board move, move)) $ genValidMoves origin board
-
-

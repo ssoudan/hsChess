@@ -84,14 +84,15 @@ defaultDepth = 4
 
 -- | Build the 'GameTree's for the next moves, evaluate their payoff and select the best one based on the player color.
 --
--- Thie method consumes a 'State' and return a 'State' with the move and the player updated.
+-- Thie method consumes a 'State' and return a 'State' with the history and the player updated.
 -- The depth of the 'GameTree's used for the evaluation is defined by 'defaultDepth'.
 --
 -- Because of the way 'Board.evalBoard' (and 'State.evalState') are defined, the 'Black' player is the maximizing player
 -- while 'White' player is the minimizing one.
 -- 
--- >>> doMove (State Board.initialBoard "" White)
--- -> move: a6->a5
+-- >>> doMove (State Board.initialBoard History.newHistory White)
+-- -> move: 
+--     a6->a5
 --      ---- B ----  
 --    a b c d e f g h
 --   ┌────────────────┐
