@@ -21,7 +21,9 @@ import           State
 --    [√] improve UX
 --    [√] Mac packaging
 --    [√] store the history in the State rather than the latest state (using DList)
+--    [√] add castling moves
 --    [ ] parallelize the move evalution
+--    [ ] pawn convertion
 --    [ ] mate detection
 --    [ ] stalemate detection
 --    [ ] check detection and move selection

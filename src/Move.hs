@@ -91,13 +91,39 @@ makePawnLegalMoves color (Pos (px,py)) board = let otherPlayerPosition = colorPo
                                                                             White -> [Pos (px - 1, py + 1), Pos (px - 1, py - 1)]
                                                 in [Pos (x,y) | (Pos (x,y)) <- (validMoves \\ otherPlayerPosition) ++ (optMoves `intersect` otherPlayerPosition), boardFilter (Pos (x, y))]
 
-data Move = Move {source :: Pos, destination :: Pos} deriving (Ord)
+data Move = Move Pos Pos | CastleWhiteLeft | CastleWhiteRight | CastleBlackLeft | CastleBlackRight deriving (Ord)
+
+getSource :: Move -> Pos
+getSource (Move source _) = source
+getSource CastleBlackRight = Pos (0,4) 
+getSource CastleBlackLeft = Pos (0,4)
+getSource CastleWhiteRight = Pos (7,3) 
+getSource CastleWhiteLeft = Pos (7,3)
+
+getDestination :: Move -> Pos
+getDestination (Move _ destination) = destination
+getDestination CastleBlackRight = Pos (0,0) 
+getDestination CastleBlackLeft = Pos (0,7)
+getDestination CastleWhiteRight = Pos (7,0) 
+getDestination CastleWhiteLeft = Pos (7,7)
 
 instance Eq Move where
-  m == n = source m == source n && destination m == destination n
+  CastleBlackLeft == n = case n of CastleBlackLeft -> True
+                                   _ -> False
+  CastleBlackRight == n = case n of CastleBlackRight -> True
+                                    _ -> False
+  CastleWhiteLeft == n = case n of CastleWhiteLeft -> True
+                                   _ -> False
+  CastleWhiteRight == n = case n of CastleWhiteRight -> True
+                                    _ -> False
+  m == n = getSource m == getSource n && getDestination m == getDestination n
 
 instance Show Move where
-  show m = showPos (source m) ++ "->" ++ showPos (destination m)
+  show (Move s d) = showPos s ++ "->" ++ showPos d
+  show CastleBlackRight = "black right castle"
+  show CastleBlackLeft = "black left castle"
+  show CastleWhiteRight = "white right castle"
+  show CastleWhiteLeft = "white left castle"
 
 -- | Create a new Move record
 makeMove :: Pos -> Pos -> Move
@@ -123,8 +149,16 @@ genValidMoves origin board = let (Just (Piece pt color)) = elementAt origin boar
 
 -- | Apply a move to a board
 --
--- TODO handle case of castle and prise en passant
+-- TODO handle prise en passant
 --
 applyMoveOnBoard :: Board -> Move -> Board
-applyMoveOnBoard board move = movePieceOnBoard board (source move) (destination move)
+applyMoveOnBoard board (Move s d) = movePieceOnBoard board s d
+applyMoveOnBoard board CastleWhiteRight = let board' = movePieceOnBoard board (Pos (7,4)) (Pos (7,6))
+                                           in movePieceOnBoard board' (Pos (7,7)) (Pos (7,5))
+applyMoveOnBoard board CastleWhiteLeft = let board' = movePieceOnBoard board (Pos (7,4)) (Pos (7,2))
+                                          in movePieceOnBoard board' (Pos (7,0)) (Pos (7,3))
+applyMoveOnBoard board CastleBlackRight = let board' = movePieceOnBoard board (Pos (0,4)) (Pos (0,2))
+                                           in movePieceOnBoard board' (Pos (0,0)) (Pos (0,3))
+applyMoveOnBoard board CastleBlackLeft = let board' = movePieceOnBoard board (Pos (0,4)) (Pos (0,6))
+                                          in movePieceOnBoard board' (Pos (0,7)) (Pos (0,5))
 

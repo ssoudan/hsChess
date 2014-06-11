@@ -7,7 +7,7 @@
 module Board where
 
 import           Data.List
-import           Data.Maybe (isJust)
+import           Data.Maybe (isJust, isNothing)
 import           Utils (applyAt)
 
 data PieceType = Rook | Knight | Bishop | King | Queen | Pawn deriving Eq
@@ -69,7 +69,7 @@ initialBoard = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece
         [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
         [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
         [Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
-        [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece King White), Just (Piece Queen White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
+        [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece Queen White), Just (Piece King White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
 
 -- | Create a 8x8 chess board with a 'jeu ouvert' setup
 jeuOuvert :: Board
@@ -80,7 +80,7 @@ jeuOuvert = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bi
         [Nothing, Nothing, Nothing, Nothing, Just (Piece Pawn White), Nothing, Nothing, Nothing],
         [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
         [Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Nothing, Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
-        [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece King White), Just (Piece Queen White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
+        [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece Queen White), Just (Piece King White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
 
 -- | Pretty print a square
 --
@@ -192,7 +192,17 @@ movePieceOnBoard board origin destination = let piece = elementAt origin board
                                                 board' = deleteSquare origin board
                                              in updateBoard destination piece board'
 
+
 -- | Returns a list of 3-uple with (column, row, 'Square') for each non-empty Square of the board.
 piecePosition :: Board -> [(Int, Int, Square)]
 piecePosition board = [ (x,y,c) | (x, row) <- zip [0..] board, (y,c) <- zip [0..] row, isJust c ]
 
+-- | True if the Square at the provided position is empty
+isEmpty :: (Int, Int) -> Board -> Bool
+isEmpty pos board = isNothing $ elementAt (Pos pos) board
+
+initialBlackKingPosition :: Pos
+initialBlackKingPosition = Pos (7,4)
+
+initialWhiteKingPosition :: Pos
+initialWhiteKingPosition = Pos (0,4)

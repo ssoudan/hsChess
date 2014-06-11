@@ -7,8 +7,8 @@
 module State where
 
 import           Board     (Board, PieceColor(..), evalBoard, otherPlayer,
-                            prettyBoard, initialBoard)
-import           Data.List (intersperse)
+                            prettyBoard, initialBoard, Pos(..), isEmpty)
+import           Data.List (intercalate)
 import           History
 import           Move
 
@@ -29,7 +29,7 @@ data PlayerState = PlayerState {
       canCastleRight :: Bool,         -- ^ True if right rook and the king have never moved
       isCheck        :: Bool,         -- ^ True if the king is check - need to move the king out of check state
       isCheckMate    :: Bool          -- ^ True if the king is checkmate - game is over
-    }
+    } deriving Show
 
 data State = State {
       getBoard       :: Board,        -- ^ the current board
@@ -48,7 +48,7 @@ newState :: State
 newState = State Board.initialBoard newHistory White newPlayerState newPlayerState
 
 instance Show State where
-    show state = "-> moves: \n\t" ++ concat (intersperse ", \n\t" (historyToList (getHistory state)))
+    show state = "-> moves: \n\t" ++ intercalate ", \n\t" (historyToList (getHistory state))
                       ++ "\n" ++ prettyBoard currentBoard
                       ++ "\n-> player: " ++ show (getPlayer state)
                       ++ "\n-> score: " ++ show (evalBoard currentBoard)
@@ -67,27 +67,72 @@ nextStates state = [ applyMove move state | move <- genAllMoves state]
 -- | Apply a 'Move' to a 'State' to generate another 'State'
 --
 -- The new 'State' contains the representation of all the moves that lead to this state.
+-- 
+-- >>> getWhiteState $ applyMove (makeMove (Pos (7,3)) (Pos (5,3))) newState
+-- PlayerState {canCastleLeft = False, canCastleRight = False, isCheck = False, isCheckMate = False}
 --
 applyMove :: Move -> State -> State
-applyMove move state = State (applyMoveOnBoard (getBoard state) move)
+applyMove move state = State (applyMoveOnBoard previousBoard move)
                              (appendHistory (getHistory state) move)
                              (otherPlayer (getPlayer state))
-                             (getWhiteState state) -- TODO update states if needed
-                             (getBlackState state) -- TODO update states if needed
+                             (updatePlayerState White (getWhiteState state)) -- TODO update states if needed
+                             (updatePlayerState Black (getBlackState state)) -- TODO update states if needed
+                  where
+                       source :: Pos
+                       source = getSource move
+                       --movedPiece :: Square
+                       --movedPiece = elementAt source previousBoard
+                       previousBoard :: Board
+                       previousBoard = getBoard state
+                       -- | Update the 'PlayerState' to reflect if the player can still castle or not
+                       updatePlayerState :: PieceColor -> PlayerState -> PlayerState
+                       updatePlayerState White playerState | source == Pos (7,4) = PlayerState False False (isCheck playerState) (isCheckMate playerState)
+                                                           | source == Pos (7,0) = PlayerState False (canCastleRight playerState) (isCheck playerState) (isCheckMate playerState)
+                                                           | source == Pos (7,7) = PlayerState (canCastleLeft playerState) False (isCheck playerState) (isCheckMate playerState)
+                                                           | otherwise = playerState
+                       updatePlayerState Black playerState | source == Pos (0,4) = PlayerState False False (isCheck playerState) (isCheckMate playerState)
+                                                           | source == Pos (0,0) = PlayerState (canCastleLeft playerState) False (isCheck playerState) (isCheckMate playerState)
+                                                           | source == Pos (0,7) = PlayerState False (canCastleRight playerState) (isCheck playerState) (isCheckMate playerState)
+                                                           | otherwise = playerState
+
+-- | Check whether the player can castle
+canCastle :: State -> (Bool, Bool)
+canCastle state = (left, right)
+            where playerColor = getPlayer state
+                  playerState = case playerColor of White -> getWhiteState state
+                                                    Black -> getBlackState state
+                  isBoardEmpty pos = isEmpty pos (getBoard state)
+                  right  = canCastleRight playerState && ((playerColor == White && isBoardEmpty (7,5) && isBoardEmpty (7,6)) 
+                                                      ||  (playerColor == Black && isBoardEmpty (0,1) && isBoardEmpty (0,2) && isBoardEmpty (0,3)))
+                  left   = canCastleLeft playerState  && ((playerColor == White && isBoardEmpty (7,1) && isBoardEmpty (7,2) && isBoardEmpty (7,3)) 
+                                                      ||  (playerColor == Black && isBoardEmpty (0,5) && isBoardEmpty (0,6)))
+
+-- | Build needed castle moves
+castleMoves :: State -> [Move]
+castleMoves state = case (canCastle state) of (True, True) -> [leftCastleMove, rightCastleMove]
+                                              (True, False) -> [leftCastleMove]
+                                              (False, True) -> [rightCastleMove]
+                                              (False, False) -> []
+              where leftCastleMove = case (getPlayer state) of White -> CastleWhiteLeft
+                                                               Black -> CastleBlackLeft
+                    rightCastleMove = case (getPlayer state) of White -> CastleWhiteRight
+                                                                Black -> CastleBlackRight
 
 -- | Generate all the possible moves
 --
+-- TODO keep only legal moves in case of check
 genAllMoves :: State -> [Move]
 genAllMoves state = let board = getBoard state
                         pieces = colorPos (getPlayer state) board
-                     in concatMap (`genValidMoves` board) pieces
+                     in concatMap (`genValidMoves` board) pieces ++ (castleMoves state)
+
 
 -- | 'State' evaluation function.
 --
 -- Currently it is basing the evaluation only on the 'Board' it contains.
 -- This is the method that should be used to evaluate a State in the strategies.
 --
--- >>> evalState (State Board.initialBoard "" White)
+-- >>> evalState newState
 -- 0
 evalState :: State -> Int
 evalState = evalBoard . getBoard
