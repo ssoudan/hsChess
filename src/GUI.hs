@@ -1,91 +1,88 @@
-{-# LANGUAGE ScopedTypeVariables #-} -- allows "forall t. Moment t"
-module GUI where 
+{-# LANGUAGE ScopedTypeVariables #-}
+module GUI where
 
 
-import Graphics.UI.WX hiding (Event)
-import Reactive.Banana
-import Reactive.Banana.WX
-import Utils (getDataFile)
-import Debug.Trace
+import           Debug.Trace
+import           Graphics.UI.WX     hiding (Event)
+import           Reactive.Banana
+import           Reactive.Banana.WX
+import           Utils              (getDataFile)
+
+import           Board              (Square, piecePosition)
+import           MoveParser
+import           State
 
 
 wk, wq :: Bitmap ()
 wk    = bitmap $ getDataFile "WK.png"
 wq    = bitmap $ getDataFile "WQ.png"
 
-height, width :: Int
-height   = 400
-width    = 400
+height, width, pieceMargin, pieceSize, boardMargin :: Int
+pieceSize = 64
+pieceMargin = 8
+boardMargin = 100
+height   = 8 * (pieceSize + pieceMargin) + boardMargin
+width    = height + boardMargin
 
 gui :: IO ()
 gui = start $ do
-    
+                f   <- frame [text := "Counter"]
+                t   <- timer f [ interval   := 500 ]
+                output  <- staticText f []
+                input <- entry f []
+                playBtn   <- button f [text := "Play"]
+                pp      <- panel f []
 
-    f       <- frame [text := "Counter"]
+                set f [layout :=  margin 10 $ column 3 [ minsize (sz width height) ( widget pp ),
+                                                         margin 10 $ row 2 [minsize (sz 200 20) (widget input), widget playBtn ],
+                                                         widget output]]
 
-    t  <- timer f [ interval   := 500 ]
+                let networkDescription :: forall t. Frameworks t => Moment t ()
+                    networkDescription = do
 
-    --bup     <- button f [text := "Up"]
-    --bdown   <- button f [text := "Down"]
-    output  <- staticText f []    
-    input <- entry f []
-    playBtn   <- button f [text := "Play"]
-    pp      <- panel f []
-    
-    --set f [layout := minsize (sz width height) $ margin 10 $
-    --        column 5 [widget bup, widget bdown, widget output, widget pp]]
-    set f [layout :=  margin 10 $ column 3 [ minsize (sz width height) ( widget pp ), margin 10 $ row 2 [minsize (sz 200 20) (widget input), widget playBtn ], widget output]]
+                                            etick  <- event0 t command
 
+                                            eplay <- event0 playBtn command
+                                            moveIn <- behaviorText input ""
 
-    let networkDescription :: forall t. Frameworks t => Moment t ()
-        networkDescription = do
-        
-            etick  <- event0 t command
+                                            let memoryE :: Event t String
+                                                memoryE = apply (const <$> moveIn) eplay
+                                                moveB :: Behavior t String
+                                                moveB = stepper "0" memoryE
 
-            --eup   <- event0 bup   command
-            --edown <- event0 bdown command
+                                            let
+                                                bship :: Behavior t State
+                                                bship = accumB newState $ (playTurn <$> (moveIn <@ eplay))
 
-            eplay <- event0 playBtn command
-            moveIn <- behaviorText input ""
+                                                playTurn :: String -> State -> State
+                                                playTurn move x = trace "playTurn" $ case (parseMove move) of Right r -> applyMove r x
+                                                                                                              Left _ -> x
 
-            ekey   <- event1 pp keyboard
+                                            sink output [text :== show <$> moveB ]
 
-            let memoryE = apply (const <$> moveIn) eplay
+                                            sink pp [on paint :== stepper (\_dc _ -> return ()) $
+                                                     (drawGameState <$> bship ) <@ (etick `union` eplay )]
 
-            let eleft  = filterE ((== KeyLeft ) . keyKey) ekey
-                eright = filterE ((== KeyRight) . keyKey) ekey
+                                            reactimate $ repaint pp <$ etick
+                                            --reactimate $ repaint output <$ etick
 
-            let
-                bship :: Behavior t Int
-                bship = accumB (width `div` 2) $
-                    (goLeft <$ eleft) `union` (goRight <$ eright)
-            
-                goLeft  x = max 0          (x - 5)
-                goRight x = min (width-30) (x + 5)
-        
-            sink output [text :== show <$> stepper "0" memoryE ] 
+                network <- compile networkDescription
+                actuate network
 
-            sink pp [on paint :== stepper (\_dc _ -> return ()) $
-                     (drawGameState <$> bship) <@ etick]
-            reactimate $ repaint pp <$ etick
-
-    network <- compile networkDescription    
-    actuate network
 
 drawBmp :: forall a. DC a -> Bitmap () -> Point -> IO ()
-drawBmp dc bmp pos = drawBitmap dc bmp pos True []    
+drawBmp dc bmp pos = drawBitmap dc bmp pos True []
 
-drawShip :: DC a -> Point -> IO ()
-drawShip dc pos = trace ("Drawing at " ++ show pos) drawBmp dc wq pos
+drawPiece :: DC a -> (Point, Square) -> IO ()
+drawPiece dc (pos, piece) = trace ("Drawing at " ++ show pos) drawBmp dc wq pos
 
-drawGameState :: Int -> DC a -> b -> IO ()
-drawGameState ship dc _view = do
+
+drawGameState :: State -> DC a -> b -> IO ()
+drawGameState state dc _view = do
     let
-        shipLocation = point ship (height `div` 2)
-        --positions    = map head rocks
-        --collisions   = map (collide shipLocation) positions
+        board = getBoard state
+        pieces = piecePosition board
 
-    drawShip dc shipLocation
-    --mapM (drawRock dc) (zip positions collisions) 
+        piecesToDraw = map (\ (x,y,p) -> (point (x*(pieceSize + pieceMargin)) (y* (pieceSize + pieceMargin)), p)) pieces
 
-    --when (or collisions) (play explode)
+    sequence_ $ map (drawPiece dc) piecesToDraw
