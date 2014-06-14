@@ -22,12 +22,14 @@ import           State
 --    [√] Mac packaging
 --    [√] store the history in the State rather than the latest state (using DList)
 --    [√] add castling moves
---    [ ] parallelize the move evalution
---    [ ] pawn convertion
+--    [ ] check detection and move selection
 --    [ ] mate detection
 --    [ ] stalemate detection
---    [ ] check detection and move selection
+--    [ ] pawn conversion
+--    [ ] parallelize the move evalution
 --    [ ] web or GUI
+--    [ ] Start from predefined states
+--    [ ] Gamification: Achievements to learn chess
 
 -- | Play a turn based on the options that have been provided.
 --
