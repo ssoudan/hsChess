@@ -6,6 +6,12 @@
 -}
 module Utils where
 
+import System.FilePath
+import System.IO.Unsafe
+
+import System.Environment.Executable
+
+
 -- | Apply function at a particular position in a list.
 --
 -- Keeps the existing value for the other positions.
@@ -14,4 +20,9 @@ applyAt :: (a -> a) -> Int -> [a] -> [a]
 applyAt f n xs = map (\ (r,v) -> case r == n of True -> f v
                                                 False -> v) (zip [0..] xs)
 
+getDataDir :: IO FilePath
+getDataDir = fmap (\x -> takeDirectory x </> ".." </> "Resources") getExecutablePath 
+    
+getDataFile :: FilePath -> FilePath
+getDataFile x = unsafePerformIO $ fmap (</> x) getDataDir
 

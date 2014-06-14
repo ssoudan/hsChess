@@ -46,7 +46,7 @@ build-type:          Custom
 extra-source-files:  README.md
 
 -- Constraint on the version of Cabal needed to build this package.
-cabal-version:       >=1.10
+cabal-version:       >=1.16
 
 
 executable hsChess
@@ -63,7 +63,13 @@ executable hsChess
   build-depends:     base >=4.6 && <4.8,
                      parsec >= 3.0.1,
                      containers, 
-                     dlist
+                     dlist, 
+                     reactive-banana == 0.8.*,
+                     reactive-banana-wx == 0.8.*,
+                     wxcore (>= 0.90) || (>= 0.90),
+                     wx (>= 0.90) || (>= 0.90),
+                     filepath,
+                     executable-path
   
   -- Directories containing source files.
   hs-source-dirs:    src/

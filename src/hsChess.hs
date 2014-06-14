@@ -13,6 +13,7 @@ import           Minimax          as M
 import           MinimaxAlphaBeta as AB
 import           MinimaxLazy      as ML
 import           State
+import           GUI
 
 
 -- TODO:
@@ -28,8 +29,26 @@ import           State
 --    [ ] pawn conversion
 --    [ ] parallelize the move evalution
 --    [ ] web or GUI
---    [ ] Start from predefined states
---    [ ] Gamification: Achievements to learn chess
+--    [ ] start from predefined states
+--    [ ] gamification: Achievements to learn chess
+
+first3 :: (a->b) -> (a,c,d) -> (b,c,d)
+first3 f (a, c, d) = (f a, c, d)
+
+second3 :: (c->b) -> (a,c,d) -> (a,b,d)
+second3 f (a, c, d) = (a, f c, d)
+
+thrid3 ::  (d->b) -> (a,c,d) -> (a,c,b)
+thrid3 f (a, c, d) = (a, c, f d)
+
+fst3 :: (a,b,c) -> a
+fst3 (a, _, _) = a
+
+snd3 :: (a,b,c) -> b
+snd3 (_, b, _) = b
+
+thrd3 :: (a,b,c) -> c
+thrd3 (_, _, c) = c
 
 -- | Play a turn based on the options that have been provided.
 --
@@ -46,7 +65,7 @@ playATurn options state = case getPlayer state of White -> do
                                                               let s' = blackStrategy state
                                                               putStr $ show s'
                                                               return s'
-                  where (assistantOption, opponentOption) = (fromMaybe NotAssisted $ fst options, fromMaybe AB $ snd options)
+                  where (assistantOption, opponentOption, _) = (first3 (fromMaybe NotAssisted)) . (second3 (fromMaybe AB)) $ options
                         whiteStrategy = Paul.doMove
                         blackStrategy = case opponentOption of ML -> ML.doMove
                                                                AB -> AB.doMove
@@ -100,8 +119,9 @@ banner = do
 
 data AssistantOption = NotAssisted | AssistedM | AssistedML | AssistedAB deriving (Eq, Show, Read)
 data OpponentOption = M | ML | AB deriving (Eq, Show, Read)
+data UIOption = GUI | TextUI deriving (Eq, Show, Read)
 
-type Options = (Maybe AssistantOption, Maybe OpponentOption)
+type Options = (Maybe AssistantOption, Maybe OpponentOption, Maybe UIOption)
 
 readMaybe :: (Read a) => String -> Maybe a
 readMaybe s = case reads s of
@@ -123,7 +143,12 @@ getOptions = do
                putStrLn " * AB: play against the AlphaBeta strategy"
                putStrLn "Which one do you want to be defeated by?"
                opponentOption <- getLine
-               return (readMaybe assistantOption :: Maybe AssistantOption, readMaybe opponentOption :: Maybe OpponentOption)
+               putStrLn "UI options are:"
+               putStrLn "GUI: graphical UI"
+               putStrLn "TextUI: text-based UI"
+               putStrLn "What kind of UI do you want?"
+               uiOption <- getLine
+               return (readMaybe assistantOption :: Maybe AssistantOption, readMaybe opponentOption :: Maybe OpponentOption, readMaybe uiOption :: Maybe UIOption)
 
 -- | Main method !
 main :: IO ()
@@ -131,8 +156,11 @@ main = do
         banner
         options <- getOptions
         --let options = (NotAssisted, AB)
-        putStr $ show newState
-        --endState <- playForNTurns 4 options initState
-        endState <- playForEver options newState
-        putStr $ show endState
+        case fromMaybe TextUI (thrd3 options) of TextUI -> do 
+                                                              putStr $ show newState
+                                                              --endState <- playForNTurns 4 options initState
+                                                              endState <- playForEver options newState
+                                                              putStr $ show endState
+                                                 GUI -> do 
+                                                          gui
 

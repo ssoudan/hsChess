@@ -11,8 +11,8 @@ main = defaultMainWithHooks $ simpleUserHooks
     { postBuild = myPostBuild -- no-op if not MacOS X
     }   
 
-myPostBuild = Mac.appBundleBuildHook apps
+myPostBuild = Mac.appBundleBuildHook apps 
 
-apps = map (mkApp ["hsChess.sh"] ) $ words "hsChess"
+apps = map (mkApp ["hsChess.sh", "icons/pieces/small/WQ.png", "icons/pieces/small/WK.png"] ) $ words "hsChess"
 
-mkApp files name = MacApp name (Just "icons/hsChess.icns") (Just "Info.plist") files [] ChaseWithDefaults
+mkApp files name = MacApp name (Just "icons/hsChess.icns") (Just "Info.plist") files [] DoNotChase
