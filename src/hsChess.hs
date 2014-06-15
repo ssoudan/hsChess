@@ -154,8 +154,8 @@ getOptions = do
 main :: IO ()
 main = do
         banner
-        options <- getOptions
-        --let options = (NotAssisted, AB)
+        --options <- getOptions
+        let options = (Just NotAssisted, Just AB, Just GUI)
         case fromMaybe TextUI (thrd3 options) of TextUI -> do 
                                                               putStr $ show newState
                                                               --endState <- playForNTurns 4 options initState

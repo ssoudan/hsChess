@@ -28,19 +28,17 @@ doMove s = do
 
            
 playMove :: String -> State -> IO State
-playMove playerMove previousState = case parsedPlayerMove of (Left _) -> do
-                                                                            putStrLn $ "Failed to parse: " ++ playerMove
-                                                                            putStrLn "[EE] Same player play again."
-                                                                            return previousState
-                                                             (Right m) -> if validMove m then (do
-                                                                                                 putStrLn $ "[II] Choosen move for " ++ show (getPlayer previousState) ++ ": " ++ show m
-                                                                                                 return $ applyMove m previousState)
-                                                                                         else (do
-                                                                                                 putStrLn "[EE] Invalid move!"
-                                                                                                 putStrLn "[EE] Same player play again."
-                                                                                                 return previousState)
-                          where allMoves :: [Move]
-                                allMoves = genAllMoves previousState
-                                validMove :: Move -> Bool
-                                validMove m = Set.member m (Set.fromList allMoves)
-                                parsedPlayerMove = parseMove playerMove
+playMove playerMove previousState = case parseMove playerMove of (Left _) -> do
+                                                                                putStrLn $ "Failed to parse: " ++ playerMove
+                                                                                putStrLn "[EE] Same player play again."
+                                                                                return previousState
+                                                                 (Right m) -> if validMove m previousState then (do
+                                                                                                                   putStrLn $ "[II] Choosen move for " ++ show (getPlayer previousState) ++ ": " ++ show m
+                                                                                                                   return $ applyMove m previousState)
+                                                                                                           else (do
+                                                                                                                   putStrLn "[EE] Invalid move!"
+                                                                                                                   putStrLn "[EE] Same player play again."
+                                                                                                                   return previousState)
+
+validMove :: Move -> State -> Bool
+validMove m s = Set.member m (Set.fromList $ genAllMoves s)

@@ -81,6 +81,7 @@ executable hsChess
   -- ghc-options:     -O2 -rtsopts -eventlog
   -- ghc-options:       -O2 -rtsopts -prof -fprof-auto 
   -- ld-options:      -static -pthread
+  ld-options:         -headerpad_max_install_names
   
 source-repository head
   type:              git 

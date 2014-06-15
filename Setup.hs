@@ -27,4 +27,4 @@ apps = map (mkApp [ "hsChess.sh"
                   , "icons/pieces/small/BP.png"
                   , "icons/pieces/small/BN.png" ] ) $ words "hsChess"
 
-mkApp files name = MacApp name (Just "icons/hsChess.icns") (Just "Info.plist") files [] DoNotChase
+mkApp files name = MacApp name (Just "icons/hsChess.icns") (Just "Info.plist") files [] ChaseWithDefaults
