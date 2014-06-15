@@ -51,17 +51,17 @@ gui = start $ do
                                                 moveB = stepper "0" memoryE
 
                                             let
-                                                bship :: Behavior t State
-                                                bship = accumB newState $ (playTurn <$> (moveIn <@ eplay))
+                                                stateB :: Behavior t State
+                                                stateB = accumB newState $ (playTurn <$> (moveIn <@ eplay))
 
                                                 playTurn :: String -> State -> State
                                                 playTurn move x = trace "playTurn" $ case (parseMove move) of Right r -> applyMove r x
                                                                                                               Left _ -> x
 
-                                            sink output [text :== show <$> moveB ]
+                                            sink output [text :== moveB ]
 
                                             sink pp [on paint :== stepper (\_dc _ -> return ()) $
-                                                     (drawGameState <$> bship ) <@ (etick `union` eplay )]
+                                                     (drawGameState <$> stateB ) <@ (etick `union` eplay )]
 
                                             reactimate $ repaint pp <$ etick
                                             --reactimate $ repaint output <$ etick
