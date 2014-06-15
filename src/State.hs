@@ -58,7 +58,6 @@ instance Show State where
 -- | Generate all the possible next states for a turn.
 --
 -- TODO generate game state as well - stalemate, mate, checkmate
--- TODO include castle
 -- TODO include 'prises en passant'
 --
 nextStates :: State -> [State]
@@ -109,14 +108,14 @@ canCastle state = (left, right)
 
 -- | Build needed castle moves
 castleMoves :: State -> [Move]
-castleMoves state = case (canCastle state) of (True, True) -> [leftCastleMove, rightCastleMove]
-                                              (True, False) -> [leftCastleMove]
-                                              (False, True) -> [rightCastleMove]
-                                              (False, False) -> []
-              where leftCastleMove = case (getPlayer state) of White -> CastleWhiteLeft
-                                                               Black -> CastleBlackLeft
-                    rightCastleMove = case (getPlayer state) of White -> CastleWhiteRight
-                                                                Black -> CastleBlackRight
+castleMoves state = case canCastle state of (True, True) -> [leftCastleMove, rightCastleMove]
+                                            (True, False) -> [leftCastleMove]
+                                            (False, True) -> [rightCastleMove]
+                                            (False, False) -> []
+              where leftCastleMove = case getPlayer state of White -> CastleWhiteLeft
+                                                             Black -> CastleBlackLeft
+                    rightCastleMove = case getPlayer state of White -> CastleWhiteRight
+                                                              Black -> CastleBlackRight
 
 -- | Generate all the possible moves
 --
@@ -124,7 +123,7 @@ castleMoves state = case (canCastle state) of (True, True) -> [leftCastleMove, r
 genAllMoves :: State -> [Move]
 genAllMoves state = let board = getBoard state
                         pieces = colorPos (getPlayer state) board
-                     in concatMap (`genValidMoves` board) pieces ++ (castleMoves state)
+                     in concatMap (`genValidMoves` board) pieces ++ castleMoves state
 
 
 -- | 'State' evaluation function.
@@ -136,3 +135,8 @@ genAllMoves state = let board = getBoard state
 -- 0
 evalState :: State -> Int
 evalState = evalBoard . getBoard
+
+
+-- | Return the move history as a [String]
+getMoveHistoryFromState :: State -> [String]
+getMoveHistoryFromState = historyToList . getHistory 

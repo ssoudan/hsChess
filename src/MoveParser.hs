@@ -46,15 +46,15 @@ parseMove = parse (choice [doParseWLCastle, doParseWRCastle, doParseBLCastle, do
             colToInt = digitToInt
             doParseWLCastle = do 
                                  try $ string "wlc"
-                                 return $ CastleWhiteLeft
+                                 return CastleWhiteLeft
             doParseWRCastle = do 
                                  try $ string "wrc"
-                                 return $ CastleWhiteRight
+                                 return CastleWhiteRight
             doParseBLCastle = do 
                                  try $ string "blc"
-                                 return $ CastleBlackLeft
+                                 return CastleBlackLeft
             doParseBRCastle = do 
                                  try $ string "brc"
-                                 return $ CastleBlackRight
+                                 return CastleBlackRight
 
 

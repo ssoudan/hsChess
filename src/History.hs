@@ -26,4 +26,4 @@ appendHistory = DL.snoc
 
 -- | Convert the history to a list of String
 historyToList :: History -> [String]
-historyToList = DL.toList . (DL.map show)
+historyToList = DL.toList . DL.map show
