@@ -23,6 +23,7 @@ import           Utils
 --    [√] add castling moves
 --    [√] web or GUI
 --    [ ] check detection and move selection
+--    [ ] async computation of moves and push notification on completion
 --    [ ] mate detection
 --    [ ] stalemate detection
 --    [ ] pawn conversion

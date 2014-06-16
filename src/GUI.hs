@@ -9,8 +9,7 @@ import           Reactive.Banana
 import           Reactive.Banana.WX
 
 
-import           Board              (Piece (..), PieceColor (..), Square,
-                                     piecePosition)
+import           Board              (Piece (..), Square, piecePosition)
 import           GUIUtils
 import           Minimax            as M
 import           MinimaxAlphaBeta   as AB
@@ -20,13 +19,16 @@ import           Options
 import           State
 import           Utils
 
-height, width, pieceMargin, pieceSize, boardMargin, squaresSize :: Int
+height, width, pieceMargin, pieceSize, boardMargin, squaresSize, boardBorder, boardSize :: Int
 pieceSize   = 64
 pieceMargin = 8
 boardMargin = 100
-height      = 8 * (pieceSize + pieceMargin) + boardMargin
-width       = height + boardMargin
+boardSize   = 8 * squaresSize
 squaresSize = pieceSize + pieceMargin
+
+height      = boardSize + boardMargin
+width       = height + boardMargin
+boardBorder = boardMargin `div` 2
 
 
 playOpponentWithStrategy :: Maybe OpponentOption -> State -> State
@@ -56,13 +58,15 @@ gui options = start $ do
                 moveList        <- singleListBox f []
                 recommendation  <- staticText f []
 
-                set f [ layout :=  margin 10 $ row 2 [margin 10 $ column 4 [ minsize (sz width height) ( widget boardPanel )
-                                                                           , margin 10 $ row 4 [ label "Move: "
-                                                                                               , minsize (sz 200 20) (widget moveInput)
-                                                                                               , widget playBtn
-                                                                                               , widget helpBtn ]
-                                                                           , margin 10 $ row 2 [label "Player: ", widget currentPlayer ]
-                                                                           , margin 10 $ row 2 [label "Recommendation: ", hfill $ widget recommendation ]]
+                set f [ layout :=  margin 10 $ row 2 [ margin 10 $ column 4 [ minsize (sz width height) ( widget boardPanel )
+                                                                            , margin 10 $ row 4 [ label "Move: "
+                                                                                                , minsize (sz 200 20) (widget moveInput)
+                                                                                                , widget playBtn
+                                                                                                , widget helpBtn ]
+                                                                            , margin 10 $ row 2 [ label "Player: "
+                                                                                                , widget currentPlayer ]
+                                                                            , margin 10 $ row 2 [ label "Recommendation: "
+                                                                                                , hfill $ widget recommendation ]]
                                                      , vfill $ minsize (sz 120 height) $ widget moveList ]]
 
                 let networkDescription :: forall t. Frameworks t => Moment t ()
@@ -70,11 +74,11 @@ gui options = start $ do
 
                                             tickE  <- event0 t command
 
-                                            playE <- event0 playBtn command
+                                            playE  <- event0 playBtn command
 
-                                            helpE <- event0 helpBtn command
+                                            helpE  <- event0 helpBtn command
 
-                                            moveIn <- behaviorText moveInput "Enter your move here (e.g. a6a5)"
+                                            moveIn <- behaviorText moveInput ""
 
                                             -- This behavior holds the state of the game
                                             let
@@ -87,16 +91,14 @@ gui options = start $ do
                                             -- if we click again on 'help')
                                             sink recommendation [ text :== stepper "Nothing" $ (last . getMoveHistoryFromState . helpPlayer <$> (stateB <@ helpE))
                                                                 , visible :== accumB True $
-                                                                                            ((pure False) <$ playE) `union`
-                                                                                            ((pure True) <$ helpE)]
-
-
+                                                                                            (pure False <$ playE) `union`
+                                                                                            (pure True <$ helpE)]
 
                                             -- Take care of the current player widget
-                                            sink currentPlayer [text :== (show . getPlayer) <$> stateB ]
+                                            sink currentPlayer [ text :== (show . getPlayer) <$> stateB ]
 
                                             -- Take care of the board
-                                            sink boardPanel [on paint :== stepper (\_dc _ -> return ()) $
+                                            sink boardPanel [ on paint :== stepper (\_dc _ -> return ()) $
                                                      (drawGameState <$> stateB ) <@ (tickE `union` playE )]
 
                                             -- Take care of the move history widget
@@ -116,8 +118,7 @@ gui options = start $ do
                 actuate network
 
 pieceBitmapFor :: Piece -> Bitmap ()
-pieceBitmapFor piece = case pieceColor piece of White -> bitmap $ getDataFile $ 'W':show (pieceType piece) ++ ".png"
-                                                Black -> bitmap $ getDataFile $ 'B':show (pieceType piece) ++ ".png"
+pieceBitmapFor piece = bitmap $ getDataFile $ show (pieceColor piece) ++ show (pieceType piece) ++ ".png"
 
 drawBmp :: forall a. DC a -> Bitmap () -> Point -> IO ()
 drawBmp dc bmp pos = drawBitmap dc bmp pos True []
@@ -126,31 +127,29 @@ drawPiece :: DC a -> (Point, Square) -> IO ()
 drawPiece dc (pos, square) = maybe (return ()) doDraw square
             where doDraw piece = drawBmp dc (pieceBitmapFor piece) pos
 
+-- | Draw the empty board
 drawBoard :: forall t a. DC a -> t -> IO ()
 drawBoard dc _view = do
                         let
-                            boardBorder :: Int
-                            boardBorder = boardMargin `div` 2
-                            boardSize :: Int
-                            boardSize   = 8 * squaresSize
-                            labelYx :: Int -> Int
-                            labelYx p   = boardBorder + squaresSize `div` 2 + p * squaresSize
-                            labelXy :: Int -> Int
-                            labelXy p   = boardBorder + squaresSize `div` 2 + p * squaresSize
-                            labelXx :: Int
-                            labelXx     = boardBorder `div` 2
-                            labelYy :: Int
-                            labelYy     = boardBorder `div` 2
+                            labelPosition :: Int -> Int
+                            labelPosition p   = boardBorder + squaresSize `div` 2 + p * squaresSize                            
+                            labelFixedPosition :: Int
+                            labelFixedPosition = boardBorder `div` 2                            
+                            figures :: [(Int, Char)]
+                            figures = zip [0..7::Int] ['0'..]
+                            letters :: [(Int, Char)]
+                            letters = zip [0..7::Int] ['a'..]
 
-                            squares = [ drawRect dc (rect (point (pos2boardX x) (pos2boardY y)) (sz squaresSize squaresSize )) [brushKind := BrushSolid, brushColor := black] | x <- [0..7::Int], y <- [0..7::Int], (x + y) `mod` 2 /= 0]
+                            -- The board itself
+                            squares = [ drawRect dc (rect (point (pos2Board x) (pos2Board y)) (sz squaresSize squaresSize )) [brushKind := BrushSolid, brushColor := black] | x <- [0..7::Int], y <- [0..7::Int], (x + y) `mod` 2 /= 0]
                             -- X labels (letters) on the left
-                            labelX = map (\(p,t) -> drawText dc [t] (point labelXx (labelXy p)) []) (zip [0..7::Int] ['0'..])
+                            labelX  = map (\(p,t) -> drawText dc [t] (point labelFixedPosition (labelPosition p)) []) figures
                             -- X labels (letters) on the right
-                            labelX2 = map (\(p,t) -> drawText dc [t] (point (labelXx + boardSize + boardBorder) (labelXy p)) []) (zip [0..7::Int] ['0'..])
+                            labelX2 = map (\(p,t) -> drawText dc [t] (point (labelFixedPosition + boardSize + boardBorder) (labelPosition p)) []) figures
                             -- Y labels (numbers) on the top
-                            labelY = map (\(p,t) -> drawText dc [t] (point (labelYx p) labelYy) []) (zip [0..7::Int] ['a'..])
+                            labelY  = map (\(p,t) -> drawText dc [t] (point (labelPosition p) labelFixedPosition) []) letters
                             -- Y labels (numbers) on the bottom
-                            labelY2 = map (\(p,t) -> drawText dc [t] (point (labelYx p) (labelYy + boardSize + boardBorder)) []) (zip [0..7::Int] ['a'..])
+                            labelY2 = map (\(p,t) -> drawText dc [t] (point (labelPosition p) (labelFixedPosition + boardSize + boardBorder)) []) letters
 
                         -- do draw the label and the squares all at once
                         sequence_ $ labelX ++ labelX2 ++ labelY ++ labelY2 ++ squares
@@ -158,11 +157,8 @@ drawBoard dc _view = do
                         drawRect dc (rect (point boardBorder boardBorder) (sz boardSize boardSize)) []
 
 
-pos2boardX :: Int -> Int
-pos2boardX x = x * (pieceSize + pieceMargin) + (boardMargin `div` 2)
-
-pos2boardY :: Int -> Int
-pos2boardY y = y * (pieceSize + pieceMargin) + (boardMargin `div` 2)
+pos2Board :: Int -> Int
+pos2Board x = x * squaresSize + (boardMargin `div` 2)
 
 drawGameState :: State -> DC a -> b -> IO ()
 drawGameState state dc _view = do
@@ -170,7 +166,7 @@ drawGameState state dc _view = do
         board = getBoard state
         pieces = piecePosition board
 
-        piecesToDraw = map (\ (y,x,p) -> (point (pos2boardX x + pieceMargin `div` 2) (pos2boardY y + pieceMargin `div` 2), p)) pieces
+        piecesToDraw = map (\ (y,x,p) -> (point (pos2Board x + pieceMargin `div` 2) (pos2Board y + pieceMargin `div` 2), p)) pieces
 
     -- draw the board
     drawBoard dc _view
