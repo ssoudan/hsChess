@@ -48,7 +48,7 @@ helpPlayer state = let state' = AB.doMove state
 gui :: Options -> IO ()
 gui options = start $ do
                 f               <- frame [ text := "hsChess"
-                                         , resizeable := True ]
+                                         , resizeable := False ]
                 t               <- timer f [ interval := 500 ]
                 currentPlayer   <- staticText f []
                 moveInput       <- entry f []
@@ -78,12 +78,16 @@ gui options = start $ do
 
                                             helpE  <- event0 helpBtn command
 
-                                            moveIn <- behaviorText moveInput ""
+                                            moveInB <- behaviorText moveInput ""
+                                            
+                                            -- Catch 'Return' key on 'moveInput' to later use it has an event similar to 'playE'
+                                            moveInE <- event1 moveInput keyboard
+                                            let moveInValidatedE = pure (const ()) <@> filterE ((== KeyReturn ) . keyKey) moveInE
 
                                             -- This behavior holds the state of the game
                                             let
                                                 stateB :: Behavior t State
-                                                stateB = accumB newState $ playTurn options <$> (moveIn <@ playE)
+                                                stateB = accumB newState $ playTurn options <$> (moveInB <@ (playE `union` moveInValidatedE))
 
                                             -- This behavior holds the recommendation
                                             -- The new recommendation is computed on helpE - help button clicked.
@@ -99,12 +103,12 @@ gui options = start $ do
 
                                             -- Take care of the board
                                             sink boardPanel [ on paint :== stepper (\_dc _ -> return ()) $
-                                                     (drawGameState <$> stateB ) <@ (tickE `union` playE )]
+                                                     (drawGameState <$> stateB ) <@ (unions [ tickE, playE, moveInValidatedE ])]
 
                                             -- Take care of the move history widget
                                             let
                                                 moveHistoryE :: Event t [String]
-                                                moveHistoryE = (getMoveHistoryFromState <$> stateB) <@ (tickE `union` playE)
+                                                moveHistoryE = (getMoveHistoryFromState <$> stateB) <@ (unions [ tickE, playE, moveInValidatedE ])
                                                 moveHistoryB :: Behavior t [String]
                                                 moveHistoryB = stepper [] moveHistoryE
 
@@ -112,7 +116,7 @@ gui options = start $ do
 
                                             reactimate $ repaint boardPanel <$ tickE
                                             reactimate $ repaint currentPlayer <$ tickE
-                                            reactimate $ repaint recommendation <$ ( tickE `union` playE `union` helpE)
+                                            reactimate $ repaint recommendation <$ (unions [ tickE, playE, moveInValidatedE, helpE])
 
                 network <- compile networkDescription
                 actuate network
