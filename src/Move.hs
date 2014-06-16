@@ -119,11 +119,11 @@ instance Eq Move where
   m == n = getSource m == getSource n && getDestination m == getDestination n
 
 instance Show Move where
-  show (Move s d) = showPos s ++ "->" ++ showPos d
-  show CastleBlackRight = "black right castle"
-  show CastleBlackLeft = "black left castle"
-  show CastleWhiteRight = "white right castle"
-  show CastleWhiteLeft = "white left castle"
+  show (Move s d) = showPos s ++ showPos d
+  show CastleBlackRight = "brc"
+  show CastleBlackLeft = "blc"
+  show CastleWhiteRight = "wrc"
+  show CastleWhiteLeft = "wlc"
 
 -- | Create a new Move record
 makeMove :: Pos -> Pos -> Move

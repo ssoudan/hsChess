@@ -192,6 +192,14 @@ movePieceOnBoard board origin destination = let piece = elementAt origin board
                                                 board' = deleteSquare origin board
                                              in updateBoard destination piece board'
 
+-- | Find a piece of the board 
+--
+-- Note this might not be the one you want in case there are multiple of that kind.
+--
+findFirstPiece :: Piece -> Board -> Maybe Pos
+findFirstPiece piece board = maybe Nothing (Just . Pos) $ lookup (Just piece) $ map prepare pieces
+                        where prepare (a,b,c) = (c, (a,b))
+                              pieces = piecePosition board
 
 -- | Returns a list of 3-uple with (column, row, 'Square') for each non-empty Square of the board.
 piecePosition :: Board -> [(Int, Int, Square)]
@@ -206,3 +214,6 @@ initialBlackKingPosition = Pos (7,4)
 
 initialWhiteKingPosition :: Pos
 initialWhiteKingPosition = Pos (0,4)
+
+king :: PieceColor -> Piece
+king = Piece King 

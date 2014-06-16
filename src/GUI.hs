@@ -105,12 +105,12 @@ gui options = start $ do
 
                                             -- Take care of the board
                                             sink boardPanel [ on paint :== stepper (\_dc _ -> return ()) $
-                                                     (drawGameState <$> stateB ) <@ (unions [ tickE, playE, moveInValidatedE ])]
+                                                     (drawGameState <$> stateB ) <@ unions [ tickE, playE, moveInValidatedE ]]
 
                                             -- Take care of the move history widget
                                             let
                                                 moveHistoryE :: Event t [String]
-                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ (unions [ tickE, playE, moveInValidatedE ])
+                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ tickE, playE, moveInValidatedE ]
                                                 moveHistoryB :: Behavior t [String]
                                                 moveHistoryB = stepper [] moveHistoryE
 
@@ -118,7 +118,7 @@ gui options = start $ do
 
                                             reactimate $ repaint boardPanel <$ tickE
                                             reactimate $ repaint currentPlayer <$ tickE
-                                            reactimate $ repaint recommendation <$ (unions [ tickE, playE, moveInValidatedE, helpE])
+                                            reactimate $ repaint recommendation <$ unions [ tickE, playE, moveInValidatedE, helpE]
 
                 network <- compile networkDescription
                 actuate network

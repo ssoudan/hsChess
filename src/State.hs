@@ -9,11 +9,12 @@ module State where
 import           Board     (Board, PieceColor (..), Pos (..), evalBoard,
                             initialBlackKingPosition, initialBoard,
                             initialWhiteKingPosition, isEmpty, otherPlayer,
-                            prettyBoard)
+                            prettyBoard, findFirstPiece, king)
 import           Data.List (intercalate)
 import qualified Data.Set  as Set
 import           History
 import           Move
+import           Data.Maybe
 
 -- [http://en.wikipedia.org/wiki/Castling]
 --
@@ -76,6 +77,11 @@ newSuperState = let state = newState
                     board = getBoard state
                  in (state, genAllMoves player playerState board)
 
+-- | Check if the player identifed by 'PieceColor' is check with one of the '[Move]' the other player can do on 'Board'.
+isPlayerCheck :: PieceColor -> Board -> [Move] -> Bool
+isPlayerCheck playerColor board = any $ (== theKing) . getDestination 
+                  where theKing = fromMaybe (Pos (-1,-1)) $ findFirstPiece (king playerColor) board
+
 
 -- | Apply a 'Move' to a 'State' to generate a new 'SuperState'
 --
@@ -86,9 +92,10 @@ newSuperState = let state = newState
 -- PlayerState {canCastleLeft = False, canCastleRight = False, isCheck = False, isCheckMate = False}
 --
 applyMove :: Move -> State -> SuperState
-applyMove move state = (state', genAllMoves nextPlayer nextPlayerState nextBoard)
+applyMove move state = (state', nextMoves)
                   where
-                       state' = State nextBoard
+                       nextMoves = genAllMoves nextPlayer nextPlayerState nextBoard -- TODO if nextMoves contains the king of the currentPlayer, current player's state must be updated to check
+                       state' = State nextBoard                                     -- TODO if nextMoves is empty, next player is checkmate
                                       (appendHistory (getHistory state) move)
                                       nextPlayer
                                       nextWhitePlayerState
@@ -101,8 +108,6 @@ applyMove move state = (state', genAllMoves nextPlayer nextPlayerState nextBoard
                                                             Black -> nextBlackPlayerState
                        source :: Pos
                        source = getSource move
-                       --movedPiece :: Square
-                       --movedPiece = elementAt source previousBoard
                        previousBoard :: Board
                        previousBoard = getBoard state
                        -- | Update the 'PlayerState' to reflect if the player can still castle or not
