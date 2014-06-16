@@ -17,11 +17,11 @@ import           Board     (PieceColor (..))
 import           Data.List
 import           State
 
-data GameTree = GameTree { getState :: State, getGameTree :: [GameTree]} deriving Show
+data GameTree = GameTree { getState :: SuperState, getGameTree :: [GameTree]} deriving Show
 
 -- | Evaluate the payoff of a 'GameTree'
 play :: GameTree->Int
-play gt = play_aux (Black == getPlayer (getState gt)) gt
+play gt = play_aux (Black == (getPlayer . fst . getState) gt) gt
       where
           play_aux _ (GameTree state' []) = evalState state'
           play_aux True (GameTree _ xs) = maximum (map (play_aux False) xs)
@@ -65,7 +65,7 @@ play gt = play_aux (Black == getPlayer (getState gt)) gt
 --      ---- W ----  
 -- ...
 --
-buildGameTree :: Int -> State -> GameTree
+buildGameTree :: Int -> SuperState -> GameTree
 buildGameTree 0 s = GameTree s []
 buildGameTree depth s = let states = nextStates s
                              in GameTree s (map (buildGameTree (depth - 1)) states)
@@ -110,10 +110,10 @@ defaultDepth = 4
 -- 
 -- -> player: Black
 -- -> score: 0
-doMove :: State -> State
+doMove :: SuperState -> SuperState
 doMove state = getState $ snd (optimizeBy compareOption options)
          where    gt = getGameTree $ buildGameTree defaultDepth state
                   doPlay g = (play g, g)
                   options = map doPlay gt
-                  optimizeBy = case getPlayer state of White -> minimumBy
-                                                       Black -> maximumBy
+                  optimizeBy = case (getPlayer . fst) state of White -> minimumBy
+                                                               Black -> maximumBy

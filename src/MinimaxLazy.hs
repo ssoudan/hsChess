@@ -43,10 +43,10 @@ import           State
 --         return bestValue
 -- (* Initial call for maximizing player *)
 -- minimax(origin, depth, TRUE)
-minimax :: State     -- ^ The current state
-           -> Int    -- ^ The remaining depth to explore
-           -> Bool   -- ^ Maximizing player?
-           -> Int    -- ^ Returns the payoff of this branch
+minimax :: SuperState -- ^ The current state
+           -> Int     -- ^ The remaining depth to explore
+           -> Bool    -- ^ Maximizing player?
+           -> Int     -- ^ Returns the payoff of this branch
 minimax state 0 _ = evalState state
 minimax state depth maximizingPlayer = if maximizingPlayer then maximum $ map (\m -> minimax m (depth - 1) False) nextState
                                                            else minimum $ map (\m -> minimax m (depth - 1) True) nextState
@@ -56,17 +56,17 @@ minimax state depth maximizingPlayer = if maximizingPlayer then maximum $ map (\
 defaultDepth :: Int
 defaultDepth = 4
 
--- | Evaluate an option as defined by the 'State' is would lead a player to.
-evalOption :: State -> PieceColor -> (Int, State)
+-- | Evaluate an option as defined by the 'SuperState' is would lead a player to.
+evalOption :: SuperState -> PieceColor -> (Int, SuperState)
 evalOption state color = (minimax state defaultDepth (color == Black), state)
 
--- | Compare two pair of ('Int', 'State') based on the value of the first Int.
-compareOption :: (Int, State) -> (Int, State) -> Ordering
+-- | Compare two pair of ('Int', 'SuperState') based on the value of the first Int.
+compareOption :: (Int, SuperState) -> (Int, SuperState) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
 
--- | Select the next move based on the minimax algorithm and the 'evalOption'/'compareOption' 'State' comparison functions.
+-- | Select the next move based on the minimax algorithm and the 'evalOption'/'compareOption' 'SuperState' comparison functions.
 -- 
--- >>> doMove (State Board.initialBoard History.newHistory White)
+-- >>> doMove (State Board.initialBoard History.newHistory White, [])
 -- -> move: 
 --     a6->a5
 --      ---- B ----  
@@ -86,10 +86,10 @@ compareOption (s1,_) (s2,_) = s1 `compare` s2
 -- 
 -- -> player: Black
 -- -> score: 0
-doMove :: State -> State
+doMove :: SuperState -> SuperState
 doMove s = snd $ optimizeBy compareOption options 
      where options = map (`evalOption` playerColor) (nextStates s)
-           playerColor = getPlayer s
+           playerColor = (getPlayer . fst) s
            optimizeBy = case playerColor of White -> minimumBy
                                             Black -> maximumBy
 

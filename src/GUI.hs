@@ -31,17 +31,19 @@ width       = height + boardMargin
 boardBorder = boardMargin `div` 2
 
 
-playOpponentWithStrategy :: Maybe OpponentOption -> State -> State
+playOpponentWithStrategy :: Maybe OpponentOption -> SuperState -> SuperState
 playOpponentWithStrategy option state = case fromMaybe AB option of AB -> AB.doMove state
                                                                     ML -> ML.doMove state
                                                                     M -> M.doMove state
 
 
-playTurn :: Options -> String -> State -> State
-playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> playOpponentWithStrategy (snd3 options) $ applyMove r state
+playTurn :: Options -> String -> SuperState -> SuperState
+playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state 
+                                                                                    then playOpponentWithStrategy (snd3 options) $ applyMove r (fst state) 
+                                                                                    else state
                                                                         Left _ -> state
 
-helpPlayer :: State -> State
+helpPlayer :: SuperState -> SuperState
 helpPlayer state = let state' = AB.doMove state
                     in trace (show state') state'
 
@@ -86,20 +88,20 @@ gui options = start $ do
 
                                             -- This behavior holds the state of the game
                                             let
-                                                stateB :: Behavior t State
-                                                stateB = accumB newState $ playTurn options <$> (moveInB <@ (playE `union` moveInValidatedE))
+                                                stateB :: Behavior t SuperState
+                                                stateB = accumB newSuperState $ playTurn options <$> (moveInB <@ (playE `union` moveInValidatedE))
 
                                             -- This behavior holds the recommendation
                                             -- The new recommendation is computed on helpE - help button clicked.
                                             -- But the play button hides the recommendation - which is again made visible (after it has been updated
                                             -- if we click again on 'help')
-                                            sink recommendation [ text :== stepper "Nothing" $ (last . getMoveHistoryFromState . helpPlayer <$> (stateB <@ helpE))
+                                            sink recommendation [ text :== stepper "Nothing" $ (last . getMoveHistoryFromState . fst . helpPlayer <$> (stateB <@ helpE))
                                                                 , visible :== accumB True $
                                                                                             (pure False <$ playE) `union`
                                                                                             (pure True <$ helpE)]
 
                                             -- Take care of the current player widget
-                                            sink currentPlayer [ text :== (show . getPlayer) <$> stateB ]
+                                            sink currentPlayer [ text :== (show . getPlayer . fst) <$> stateB ]
 
                                             -- Take care of the board
                                             sink boardPanel [ on paint :== stepper (\_dc _ -> return ()) $
@@ -108,7 +110,7 @@ gui options = start $ do
                                             -- Take care of the move history widget
                                             let
                                                 moveHistoryE :: Event t [String]
-                                                moveHistoryE = (getMoveHistoryFromState <$> stateB) <@ (unions [ tickE, playE, moveInValidatedE ])
+                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ (unions [ tickE, playE, moveInValidatedE ])
                                                 moveHistoryB :: Behavior t [String]
                                                 moveHistoryB = stepper [] moveHistoryE
 
@@ -164,10 +166,10 @@ drawBoard dc _view = do
 pos2Board :: Int -> Int
 pos2Board x = x * squaresSize + (boardMargin `div` 2)
 
-drawGameState :: State -> DC a -> b -> IO ()
+drawGameState :: SuperState -> DC a -> b -> IO ()
 drawGameState state dc _view = do
     let
-        board = getBoard state
+        board = (getBoard . fst) state
         pieces = piecePosition board
 
         piecesToDraw = map (\ (y,x,p) -> (point (pos2Board x + pieceMargin `div` 2) (pos2Board y + pieceMargin `div` 2), p)) pieces

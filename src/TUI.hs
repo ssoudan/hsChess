@@ -21,34 +21,34 @@ import           Utils
 -- Basically, White player is a human player
 -- Black player is an AI. You can select the one that will be used.
 -- And as a human player, you can also have an AI that tell you what it would have played after you did it - yeah that's evil.
-playATurn :: Options -> State -> IO State
-playATurn options state = case getPlayer state of White -> do
-                                                              s' <- whiteStrategy state
-                                                              assistantStrategy state
-                                                              putStr $ show s'
-                                                              return s'
-                                                  Black -> do
-                                                              let s' = blackStrategy state
-                                                              putStr $ show s'
-                                                              return s'
-                  where (assistantOption, opponentOption, _) = first3 (fromMaybe NotAssisted) . second3 (fromMaybe AB) $ options
-                        whiteStrategy = Paul.doMove
-                        blackStrategy = case opponentOption of ML -> ML.doMove
-                                                               AB -> AB.doMove
-                                                               M -> M.doMove
-                        assistantStrategy s = case assistantOption of AssistedML -> do
-                                                                                      putStrLn "[ML] Thinking to what I would have played..."
-                                                                                      (print . ML.doMove) s
-                                                                                      putStrLn "[ML] But you played:"
-                                                                      AssistedAB -> do
-                                                                                      putStrLn "[AB] Thinking to what I would have played..."
-                                                                                      (print . AB.doMove) s
-                                                                                      putStrLn "[AB] But you played:"
-                                                                      AssistedM -> do
-                                                                                     putStrLn "[M] Thinking to what I would have played..."
-                                                                                     (print . M.doMove) s
-                                                                                     putStrLn "[M] But you played:"
-                                                                      NotAssisted -> return ()
+playATurn :: Options -> SuperState -> IO SuperState
+playATurn options state = case (getPlayer . fst) state of White -> do
+                                                                      s' <- whiteStrategy state
+                                                                      assistantStrategy state
+                                                                      putStr $ show s'
+                                                                      return s'
+                                                          Black -> do
+                                                                      let s' = blackStrategy state
+                                                                      putStr $ show s'
+                                                                      return s'
+                          where (assistantOption, opponentOption, _) = first3 (fromMaybe NotAssisted) . second3 (fromMaybe AB) $ options
+                                whiteStrategy = Paul.doMove
+                                blackStrategy = case opponentOption of ML -> ML.doMove
+                                                                       AB -> AB.doMove
+                                                                       M -> M.doMove
+                                assistantStrategy s = case assistantOption of AssistedML -> do
+                                                                                              putStrLn "[ML] Thinking to what I would have played..."
+                                                                                              (print . ML.doMove) s
+                                                                                              putStrLn "[ML] But you played:"
+                                                                              AssistedAB -> do
+                                                                                              putStrLn "[AB] Thinking to what I would have played..."
+                                                                                              (print . AB.doMove) s
+                                                                                              putStrLn "[AB] But you played:"
+                                                                              AssistedM -> do
+                                                                                             putStrLn "[M] Thinking to what I would have played..."
+                                                                                             (print . M.doMove) s
+                                                                                             putStrLn "[M] But you played:"
+                                                                              NotAssisted -> return ()
 
 
 -- | Interactive function to get the 'Option's.
@@ -77,7 +77,7 @@ getOptions = do
 --
 -- TODO need to consider the end of game...
 --
-playForEver :: Options -> State -> IO State
+playForEver :: Options -> SuperState -> IO SuperState
 playForEver options state = do
                               s <- playATurn options state
                               playForEver options s
@@ -86,7 +86,7 @@ playForEver options state = do
 --
 -- Essentially used for benchmarking
 --
-playForNTurns :: Int -> Options -> State -> IO State
+playForNTurns :: Int -> Options -> SuperState -> IO SuperState
 playForNTurns 0 _ state = return state
 playForNTurns n options state = do
                                  s <- playATurn options state
@@ -107,7 +107,8 @@ banner = do
 
 tui :: Options -> IO ()
 tui options = do 
-        putStr $ show newState  
+        let initState = newSuperState  
+        putStr $ show initState
         --endState <- playForNTurns 4 options initState
-        endState <- playForEver options newState
+        endState <- playForEver options initState
         putStr $ show endState

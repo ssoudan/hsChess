@@ -7,13 +7,11 @@
 module InteractiveGame (doMove, playMove) where
 
 import           Board      (PieceColor)
-import qualified Data.Set   as Set
-import           Move
 import           MoveParser (parseMove)
 import           State
 
 
-doMove :: State -> IO State
+doMove :: SuperState -> IO SuperState
 doMove s = do
               putStrLn $ "[II] " ++ show playerColor ++ " turn\nWhat do want to play? (e.g. a6b7)"
               --putStrLn "[II] Possible moves: "
@@ -22,23 +20,21 @@ doMove s = do
               playMove moveCommandInput s -- parse and play move if parsing succeeded
      where
            playerColor :: PieceColor
-           playerColor = getPlayer s
+           playerColor = (getPlayer . fst) s
 
 
 
            
-playMove :: String -> State -> IO State
+playMove :: String -> SuperState -> IO SuperState
 playMove playerMove previousState = case parseMove playerMove of (Left _) -> do
                                                                                 putStrLn $ "Failed to parse: " ++ playerMove
                                                                                 putStrLn "[EE] Same player play again."
                                                                                 return previousState
                                                                  (Right m) -> if validMove m previousState then (do
-                                                                                                                   putStrLn $ "[II] Choosen move for " ++ show (getPlayer previousState) ++ ": " ++ show m
-                                                                                                                   return $ applyMove m previousState)
+                                                                                                                   putStrLn $ "[II] Choosen move for " ++ show ((getPlayer . fst) previousState) ++ ": " ++ show m
+                                                                                                                   return $ applyMove m (fst previousState))
                                                                                                            else (do
                                                                                                                    putStrLn "[EE] Invalid move!"
                                                                                                                    putStrLn "[EE] Same player play again."
                                                                                                                    return previousState)
 
-validMove :: Move -> State -> Bool
-validMove m s = Set.member m (Set.fromList $ genAllMoves s)

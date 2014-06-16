@@ -42,11 +42,11 @@ import           State
 --        return β
 --  (* Initial call *)
 --  alphabeta(origin, depth, -∞, +∞, TRUE)
-minimax :: State -> Int -> Int -> Int -> Bool -> Int
+minimax :: SuperState -> Int -> Int -> Int -> Bool -> Int
 minimax state' 0 _ _ _ = evalState state'
 minimax state' depth' alpha' beta' b' = minimaxAux depth' alpha' beta' (nextStates state') b'
   where
-    minimaxAux :: Int -> Int -> Int -> [State] -> Bool -> Int
+    minimaxAux :: Int -> Int -> Int -> [SuperState] -> Bool -> Int
     minimaxAux _ alpha beta [] maximizingPlayer = if maximizingPlayer then alpha else beta
     minimaxAux depth alpha beta (x:xs) True = let alphaP = minimax x (depth - 1) alpha beta False
                                                   alphaMax = max alphaP alpha
@@ -73,18 +73,18 @@ initialBeta = 100000
 defaultDepth :: Int
 defaultDepth = 4
 
--- | Evaluate an option as defined by the 'State' is would lead a player to.
+-- | Evaluate an option as defined by the 'SuperState' is would lead a player to.
 --
 -- Limit the exploration to a depth of 'defaultDepth'
 --
-evalOption :: State -> Bool -> (Int, State)
+evalOption :: SuperState -> Bool -> (Int, SuperState)
 evalOption state maximizingPlayer = (minimax state defaultDepth initialAlpha initialBeta maximizingPlayer, state)
 
--- | Compare two pair of ('Int', 'State') based on the value of the first Int.
-compareOption :: (Int, State) -> (Int, State) -> Ordering
+-- | Compare two pair of ('Int', 'SuperState') based on the value of the first Int.
+compareOption :: (Int, SuperState) -> (Int, SuperState) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
 
--- | Select the next move based on the minimax algorithm and the 'evalOption'/'compareOption' 'State' comparison functions.
+-- | Select the next move based on the minimax algorithm and the 'evalOption'/'compareOption' 'SuperState' comparison functions.
 -- 
 -- >>> doMove (State Board.initialBoard History.newHistory White)
 -- -> move: 
@@ -106,9 +106,9 @@ compareOption (s1,_) (s2,_) = s1 `compare` s2
 -- 
 -- -> player: Black
 -- -> score: 0
-doMove :: State -> State
+doMove :: SuperState -> SuperState
 doMove s = snd $ optimizeBy (nextStates s)           
-     where playerColor = getPlayer s
+     where playerColor = (getPlayer . fst) s
            optimizeBy state = case playerColor of White -> minimumBy compareOption (map (`evalOption` True) state) 
                                                   Black -> maximumBy compareOption (map (`evalOption` False) state) 
 
