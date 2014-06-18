@@ -167,7 +167,7 @@ pos2Board :: Int -> Int
 pos2Board x = x * squaresSize + (boardMargin `div` 2)
 
 drawGameState :: SuperState -> DC a -> b -> IO ()
-drawGameState state dc _view = do
+drawGameState state dc _view = traceShow state $ do
     let
         board = (getBoard . fst) state
         pieces = piecePosition board

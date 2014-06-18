@@ -82,6 +82,18 @@ jeuOuvert = [[Just (Piece Rook Black), Just (Piece Knight Black), Just (Piece Bi
         [Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White), Nothing, Just (Piece Pawn White), Just (Piece Pawn White), Just (Piece Pawn White)],
         [Just (Piece Rook White), Just (Piece Knight White), Just (Piece Bishop White), Just (Piece Queen White), Just (Piece King White), Just (Piece Bishop White), Just (Piece Knight White), Just (Piece Rook White)]]
 
+-- | Create a 8x8 chess board with a rook and king only setup
+deuxContreDeux :: Board
+deuxContreDeux = [[Just (Piece Rook Black), Nothing, Nothing, Nothing, Just (Piece King Black), Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing],
+        [Nothing, Nothing, Nothing, Nothing, Just (Piece King White), Nothing, Nothing, Just (Piece Rook White)]]
+
+
 -- | Pretty print a square
 --
 -- Use ". " for empty squares and the unicode character followed by a space for pieces.

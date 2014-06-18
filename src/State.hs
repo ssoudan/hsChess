@@ -11,7 +11,6 @@ import           Board     (Board, PieceColor (..), Pos (..), evalBoard,
                             initialWhiteKingPosition, isEmpty, otherPlayer,
                             prettyBoard, findFirstPiece, king)
 import           Data.List (intercalate)
-import qualified Data.Set  as Set
 import           History
 import           Move
 import           Data.Maybe
@@ -56,6 +55,8 @@ instance Show State where
                       ++ "\n" ++ prettyBoard currentBoard
                       ++ "\n-> player: " ++ show (getPlayer state)
                       ++ "\n-> score: " ++ show (evalBoard currentBoard)
+                      ++ "\n-> white state: " ++ show (getWhiteState state)
+                      ++ "\n-> Black state: " ++ show (getBlackState state)
                       ++ "\n"
         where currentBoard = getBoard state
 
@@ -71,17 +72,15 @@ nextStates (state, allMoves) = [ applyMove move state | move <- allMoves ]
 
 newSuperState :: SuperState
 newSuperState = let state = newState
-                    player = getPlayer state
-                    playerState = case player of White -> getWhiteState state
-                                                 Black -> getBlackState state
-                    board = getBoard state
-                 in (state, genAllMoves player playerState board)
+                 in (state, genAllMoves state)
 
 -- | Check if the player identifed by 'PieceColor' is check with one of the '[Move]' the other player can do on 'Board'.
 isPlayerCheck :: PieceColor -> Board -> [Move] -> Bool
 isPlayerCheck playerColor board = any $ (== theKing) . getDestination 
                   where theKing = fromMaybe (Pos (-1,-1)) $ findFirstPiece (king playerColor) board
 
+mkPlayerState :: Bool -> Bool -> Bool -> Bool -> PlayerState
+mkPlayerState = PlayerState 
 
 -- | Apply a 'Move' to a 'State' to generate a new 'SuperState'
 --
@@ -92,43 +91,51 @@ isPlayerCheck playerColor board = any $ (== theKing) . getDestination
 -- PlayerState {canCastleLeft = False, canCastleRight = False, isCheck = False, isCheckMate = False}
 --
 applyMove :: Move -> State -> SuperState
-applyMove move state = (state', nextMoves)
+applyMove move state = (state', nextPlayerMoves)
                   where
-                       nextMoves = genAllMoves nextPlayer nextPlayerState nextBoard -- TODO if nextMoves contains the king of the currentPlayer, current player's state must be updated to check
+                       nextPlayerMoves = genAllMoves state'                         -- TODO if nextMoves contains the king of the currentPlayer, current player's state must be updated to check
                        state' = State nextBoard                                     -- TODO if nextMoves is empty, next player is checkmate
                                       (appendHistory (getHistory state) move)
                                       nextPlayer
                                       nextWhitePlayerState
                                       nextBlackPlayerState
-                       nextPlayer = otherPlayer (getPlayer state)
+                       currentPlayerMoves = genBasicMoves nextBoard currentPlayer
+                       otherPlayerMoves = genBasicMoves nextBoard nextPlayer
+                       currentPlayer = getPlayer state
+                       nextPlayer = otherPlayer currentPlayer
                        nextBoard = applyMoveOnBoard previousBoard move
-                       nextWhitePlayerState = updatePlayerState White (getWhiteState state) -- TODO update states if needed
-                       nextBlackPlayerState = updatePlayerState Black (getBlackState state) -- TODO update states if needed
-                       nextPlayerState = case nextPlayer of White -> nextWhitePlayerState
-                                                            Black -> nextBlackPlayerState
+                       isWhiteCheck = ((currentPlayer == Black) && isNextPlayerCheck) || (currentPlayer == White && isCurrentPlayerCheck) -- these two functions, only update the state of the next player
+                       isBlackCheck = ((currentPlayer == White) && isNextPlayerCheck) || (currentPlayer == Black && isCurrentPlayerCheck) -- 
+                       nextWhitePlayerState = updatePlayerState source White (getWhiteState state) isWhiteCheck False -- TODO update states if needed, for now assume no one is CheckMate
+                       nextBlackPlayerState = updatePlayerState source Black (getBlackState state) isBlackCheck False -- TODO update states if needed, for now assume no one is CheckMate
+                       isNextPlayerCheck = isPlayerCheck nextPlayer nextBoard currentPlayerMoves
+                       isCurrentPlayerCheck = isPlayerCheck currentPlayer nextBoard otherPlayerMoves
                        source :: Pos
                        source = getSource move
                        previousBoard :: Board
                        previousBoard = getBoard state
-                       -- | Update the 'PlayerState' to reflect if the player can still castle or not
-                       updatePlayerState :: PieceColor -> PlayerState -> PlayerState
-                       updatePlayerState White playerState | source == initialBlackKingPosition = PlayerState False False (isCheck playerState) (isCheckMate playerState)
-                                                           | source == Pos (7,0) = PlayerState False (canCastleRight playerState) (isCheck playerState) (isCheckMate playerState)
-                                                           | source == Pos (7,7) = PlayerState (canCastleLeft playerState) False (isCheck playerState) (isCheckMate playerState)
-                                                           | otherwise = playerState
-                       updatePlayerState Black playerState | source == initialWhiteKingPosition = PlayerState False False (isCheck playerState) (isCheckMate playerState)
-                                                           | source == Pos (0,0) = PlayerState (canCastleLeft playerState) False (isCheck playerState) (isCheckMate playerState)
-                                                           | source == Pos (0,7) = PlayerState False (canCastleRight playerState) (isCheck playerState) (isCheckMate playerState)
-                                                           | otherwise = playerState
+
+-- | Update the 'PlayerState' to reflect if the player can still castle or not
+--
+-- TODO does not work in case the rook has been captured before moving
+--
+updatePlayerState :: Pos -> PieceColor -> PlayerState -> Bool -> Bool -> PlayerState        
+updatePlayerState source playerColor playerState | playerColor == White && source == initialBlackKingPosition = mkPlayerState False False
+                                                 | playerColor == White && source == Pos (7,0)                = mkPlayerState False (canCastleRight playerState)
+                                                 | playerColor == White && source == Pos (7,7)                = mkPlayerState (canCastleLeft playerState) False
+                                                 | playerColor == Black && source == initialWhiteKingPosition = mkPlayerState False False
+                                                 | playerColor == Black && source == Pos (0,0)                = mkPlayerState (canCastleLeft playerState) False
+                                                 | playerColor == Black && source == Pos (0,7)                = mkPlayerState False (canCastleRight playerState)
+                                                 | otherwise                                                  = mkPlayerState (canCastleLeft playerState) (canCastleRight playerState)
 
 -- | Check whether the player can castle
 canCastle :: PieceColor -> PlayerState -> Board -> (Bool, Bool)
 canCastle playerColor playerState board = (left, right)
             where isBoardEmpty pos = isEmpty pos board
-                  right  = canCastleRight playerState && ((playerColor == White && isBoardEmpty (7,5) && isBoardEmpty (7,6))
-                                                      ||  (playerColor == Black && isBoardEmpty (0,1) && isBoardEmpty (0,2) && isBoardEmpty (0,3)))
-                  left   = canCastleLeft playerState  && ((playerColor == White && isBoardEmpty (7,1) && isBoardEmpty (7,2) && isBoardEmpty (7,3))
-                                                      ||  (playerColor == Black && isBoardEmpty (0,5) && isBoardEmpty (0,6)))
+                  right = canCastleRight playerState && ((playerColor == White && isBoardEmpty (7,5) && isBoardEmpty (7,6))
+                                                     ||  (playerColor == Black && isBoardEmpty (0,1) && isBoardEmpty (0,2) && isBoardEmpty (0,3)))
+                  left  = canCastleLeft playerState  && ((playerColor == White && isBoardEmpty (7,1) && isBoardEmpty (7,2) && isBoardEmpty (7,3))
+                                                     ||  (playerColor == Black && isBoardEmpty (0,5) && isBoardEmpty (0,6)))
 
 -- | Build needed castle moves
 castleMoves :: PieceColor -> PlayerState -> Board -> [Move]
@@ -141,15 +148,28 @@ castleMoves playerColor playerState board = case canCastle playerColor playerSta
                                                                     rightCastleMove = case playerColor of White -> CastleWhiteRight
                                                                                                           Black -> CastleBlackRight
 
+genBasicMoves :: Board -> PieceColor -> [Move]
+genBasicMoves board playerColor = let pieces = colorPos playerColor board
+                                   in concatMap (`genValidMoves` board) pieces
+
 -- | Generate all the possible moves
 --
 -- TODO keep only legal moves in case of check
-genAllMoves :: PieceColor -> PlayerState -> Board -> [Move]
-genAllMoves playerColor playerState board = let pieces = colorPos playerColor board
-                                             in concatMap (`genValidMoves` board) pieces ++ castleMoves playerColor playerState board
+genAllMoves :: State -> [Move]
+genAllMoves state                         = let playerColor = getPlayer state
+                                                playerState = getCurrentPlayerState state
+                                                board = getBoard state
+                                                allMoves = (genBasicMoves board playerColor) ++ castleMoves playerColor playerState board
+                                                getCurrentPlayerState = case playerColor of White -> getWhiteState
+                                                                                            Black -> getBlackState
+                                             in 
+                                               if isCheck playerState
+                                                then [ move | move <- allMoves, (not . isCheck . getCurrentPlayerState . fst) $ applyMove move state ] 
+                                                else allMoves
 
+-- | True if the 'Move' is valid for the 'SuperState' 
 validMove :: Move -> SuperState -> Bool
-validMove m s = Set.member m (Set.fromList $ snd s)
+validMove m s = elem m $ snd s
 
 -- | 'State' evaluation function.
 --
