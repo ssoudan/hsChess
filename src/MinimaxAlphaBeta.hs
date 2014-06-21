@@ -44,8 +44,13 @@ import           State
 --  alphabeta(origin, depth, -∞, +∞, TRUE)
 minimax :: SuperState -> Int -> Int -> Int -> Bool -> Int
 minimax state' 0 _ _ _ = evalState state'
-minimax state' depth' alpha' beta' b' = minimaxAux depth' alpha' beta' (nextStates state') b'
+minimax state' depth' alpha' beta' b' = if (null children) 
+                                         then evalState state'
+                                         else minimaxAux depth' alpha' beta' children b'
+
   where
+    children :: [SuperState]
+    children = nextStates state'
     minimaxAux :: Int -> Int -> Int -> [SuperState] -> Bool -> Int
     minimaxAux _ alpha beta [] maximizingPlayer = if maximizingPlayer then alpha else beta
     minimaxAux depth alpha beta (x:xs) True = let alphaP = minimax x (depth - 1) alpha beta False

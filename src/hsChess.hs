@@ -22,9 +22,9 @@ import           Utils
 --    [√] store the history in the State rather than the latest state (using DList)
 --    [√] add castling moves
 --    [√] web or GUI
---    [ ] check detection and move selection
+--    [√] check detection and move selection
+--    [√] mate detection
 --    [ ] async computation of moves and push notification on completion
---    [ ] mate detection
 --    [ ] stalemate detection
 --    [ ] pawn conversion
 --    [ ] parallelize the move evalution

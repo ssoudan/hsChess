@@ -38,14 +38,16 @@ playOpponentWithStrategy option state = case fromMaybe AB option of AB -> AB.doM
 
 
 playTurn :: Options -> String -> SuperState -> SuperState
-playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state 
+playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state && not (isCurrentPlayerMate state)
                                                                                     then playOpponentWithStrategy (snd3 options) $ applyMove r (fst state) 
                                                                                     else state
                                                                         Left _ -> state
 
-helpPlayer :: SuperState -> SuperState
-helpPlayer state = let state' = AB.doMove state
-                    in trace (show state') state'
+helpPlayer :: SuperState -> Maybe SuperState
+helpPlayer state = if isCurrentPlayerMate state 
+                    then Nothing 
+                    else let state' = AB.doMove state
+                          in trace (show state') $ Just state'
 
 gui :: Options -> IO ()
 gui options = start $ do
@@ -53,6 +55,7 @@ gui options = start $ do
                                          , resizeable := False ]
                 t               <- timer f [ interval := 500 ]
                 currentPlayer   <- staticText f []
+                currentPlayerStatus   <- staticText f []
                 moveInput       <- entry f []
                 playBtn         <- button f [ text := "Play" ]
                 helpBtn         <- button f [ text := "Help me!!" ]
@@ -60,13 +63,15 @@ gui options = start $ do
                 moveList        <- singleListBox f []
                 recommendation  <- staticText f []
 
-                set f [ layout :=  margin 10 $ row 2 [ margin 10 $ column 4 [ minsize (sz width height) ( widget boardPanel )
+                set f [ layout :=  margin 10 $ row 2 [ margin 10 $ column 5 [ minsize (sz width height) ( widget boardPanel )
                                                                             , margin 10 $ row 4 [ label "Move: "
                                                                                                 , minsize (sz 200 20) (widget moveInput)
                                                                                                 , widget playBtn
                                                                                                 , widget helpBtn ]
-                                                                            , margin 10 $ row 2 [ label "Player: "
+                                                                            , margin 10 $ row 3 [ label "Player: "
                                                                                                 , widget currentPlayer ]
+                                                                            , margin 10 $ row 2 [ label "Status: "
+                                                                                                , hfill $ widget currentPlayerStatus ]
                                                                             , margin 10 $ row 2 [ label "Recommendation: "
                                                                                                 , hfill $ widget recommendation ]]
                                                      , vfill $ minsize (sz 120 height) $ widget moveList ]]
@@ -95,7 +100,7 @@ gui options = start $ do
                                             -- The new recommendation is computed on helpE - help button clicked.
                                             -- But the play button hides the recommendation - which is again made visible (after it has been updated
                                             -- if we click again on 'help')
-                                            sink recommendation [ text :== stepper "Nothing" $ (last . getMoveHistoryFromState . fst . helpPlayer <$> (stateB <@ helpE))
+                                            sink recommendation [ text :== stepper "Nothing" $ ((maybe "Start a new game..." (last . getMoveHistoryFromState . fst)) . helpPlayer <$> (stateB <@ helpE))
                                                                 , visible :== accumB True $
                                                                                             (pure False <$ playE) `union`
                                                                                             (pure True <$ helpE)]
@@ -103,9 +108,13 @@ gui options = start $ do
                                             -- Take care of the current player widget
                                             sink currentPlayer [ text :== (show . getPlayer . fst) <$> stateB ]
 
+                                            sink currentPlayerStatus [ text :== (showPlayerState . getCurrentPlayerState ) <$> stateB ]
+
                                             -- Take care of the board
                                             sink boardPanel [ on paint :== stepper (\_dc _ -> return ()) $
                                                      (drawGameState <$> stateB ) <@ unions [ tickE, playE, moveInValidatedE ]]
+
+                                            sink playBtn [ visible :== (not . isCurrentPlayerMate ) <$> stateB ]
 
                                             -- Take care of the move history widget
                                             let
@@ -118,10 +127,18 @@ gui options = start $ do
 
                                             reactimate $ repaint boardPanel <$ tickE
                                             reactimate $ repaint currentPlayer <$ tickE
+                                            reactimate $ repaint currentPlayerStatus <$ tickE
                                             reactimate $ repaint recommendation <$ unions [ tickE, playE, moveInValidatedE, helpE]
 
                 network <- compile networkDescription
                 actuate network
+
+showPlayerState :: PlayerState -> String
+showPlayerState playerState = if (isCheckMate playerState) 
+                                then "CheckMate!"
+                                else if (isCheck playerState)
+                                    then "Check!"
+                                    else "So far so good"
 
 pieceBitmapFor :: Piece -> Bitmap ()
 pieceBitmapFor piece = bitmap $ getDataFile $ show (pieceColor piece) ++ show (pieceType piece) ++ ".png"
