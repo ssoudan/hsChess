@@ -8,10 +8,10 @@
 -- | Strategy based on a lazy implementation of the Minimax algorithm with alpha-beta pruning.
 --
 -- The game tree is NOT computed beforehand but generated up to a certain depth while it is evaluated.
--- The size of the heap is quite limited - it can fit in 3MB for a depth of 4. 
+-- The size of the heap is quite limited - it can fit in 3MB for a depth of 4.
 -- The total amount of allocation is still important.
 -- Subtree might not get explored because of the pruning.
--- 
+--
 -- This implementation is slower than the one of "Minimax" but faster than "MinimaxLazy"
 --
 -- See also "Minimax", "MinimaxLazy"
@@ -19,6 +19,7 @@ module MinimaxAlphaBeta (doMove) where
 
 import           Board     (PieceColor (..))
 import           Data.List
+import           ParUtils
 import           State
 
 
@@ -44,7 +45,7 @@ import           State
 --  alphabeta(origin, depth, -∞, +∞, TRUE)
 minimax :: SuperState -> Int -> Int -> Int -> Bool -> Int
 minimax state' 0 _ _ _ = evalState state'
-minimax state' depth' alpha' beta' b' = if (null children) 
+minimax state' depth' alpha' beta' b' = if null children
                                          then evalState state'
                                          else minimaxAux depth' alpha' beta' children b'
 
@@ -90,11 +91,11 @@ compareOption :: (Int, SuperState) -> (Int, SuperState) -> Ordering
 compareOption (s1,_) (s2,_) = s1 `compare` s2
 
 -- | Select the next move based on the minimax algorithm and the 'evalOption'/'compareOption' 'SuperState' comparison functions.
--- 
+--
 -- >>> doMove (State Board.initialBoard History.newHistory White)
--- -> move: 
+-- -> move:
 --     a6->a5
---      ---- B ----  
+--      ---- B ----
 --    a b c d e f g h
 --   ┌────────────────┐
 -- 0 │♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜ │
@@ -107,13 +108,13 @@ compareOption (s1,_) (s2,_) = s1 `compare` s2
 -- 7 │♖ ♘ ♗ ♔ ♕ ♗ ♘ ♖ │
 --   └────────────────┘
 --    a b c d e f g h
---      ---- W ----  
--- 
+--      ---- W ----
+--
 -- -> player: Black
 -- -> score: 0
 doMove :: SuperState -> SuperState
-doMove s = snd $ optimizeBy (nextStates s)           
+doMove s = snd $ optimizeBy (nextStates s)
      where playerColor = (getPlayer . fst) s
-           optimizeBy state = case playerColor of White -> minimumBy compareOption (map (`evalOption` True) state) 
-                                                  Black -> maximumBy compareOption (map (`evalOption` False) state) 
+           optimizeBy state = case playerColor of White -> minimumBy compareOption (myRunPar $ myParMap (`evalOption` True) state)
+                                                  Black -> maximumBy compareOption (myRunPar $ myParMap (`evalOption` False) state)
 

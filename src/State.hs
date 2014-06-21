@@ -15,6 +15,7 @@ import           History
 import           Move
 import           Data.Maybe
 
+
 -- [http://en.wikipedia.org/wiki/Castling]
 --
 -- Castling consists of moving the king two squares towards a rook on the player's first rank,
@@ -68,7 +69,7 @@ type SuperState = (State, [Move])
 -- TODO include 'prises en passant'
 --
 nextStates :: SuperState -> [SuperState]
-nextStates (state, allMoves) = [ applyMove move state | move <- allMoves ]
+nextStates (state, allMoves) = map (`applyMove` state) allMoves
 
 newSuperState :: SuperState
 newSuperState = let state = newState
