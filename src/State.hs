@@ -194,10 +194,10 @@ evalState state = let s = fst state
                       isWhiteMate = isCheckMate . getWhiteState $ s
                       isBlackMate = isCheckMate . getBlackState $ s
                    in if isWhiteMate
-                      then -1000000
-                      else if isBlackMate
-                        then 1000000
-                        else evalBoard . getBoard $ s
+                       then -1000000
+                       else if isBlackMate
+                             then 1000000
+                             else evalBoard . getBoard $ s
 
 
 -- | Return the move history as a [String]

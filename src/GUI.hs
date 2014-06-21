@@ -97,7 +97,7 @@ gui options = start $ do
                                                 mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
 
                                                 activeCellB :: Behavior t (Maybe Pos)
-                                                activeCellB = cellFromPoint <$> mouseB
+                                                activeCellB = posFromPoint <$> mouseB
 
                                             sink debug [ text :== stepper "" $ show <$> (activeCellB <@ mouseE) ]
 
@@ -150,16 +150,11 @@ gui options = start $ do
                 network <- compile networkDescription
                 actuate network
 
+-- | Filters 'EventMouse' to keep only the 'MouseMotion'
 justMotion :: EventMouse -> Maybe Point
 justMotion (MouseMotion p _) = Just p
 justMotion _                 = Nothing
 
-cellFromPoint :: Point -> Maybe Pos
-cellFromPoint (Point x y) = let xx = (x - boardBorder) `div` squaresSize
-                                yy = (y - boardBorder) `div` squaresSize
-                             in if xx >= 0 && xx <= 7 && yy >= 0 && yy <= 7
-                                  then Just $ Pos (yy,xx)
-                                  else Nothing
 
 showPlayerState :: PlayerState -> String
 showPlayerState playerState | isCheckMate playerState = "CheckMate!"
@@ -205,6 +200,13 @@ drawBoard dc _view = do
                         -- add a border to the board
                         drawRect dc (rect (point boardBorder boardBorder) (sz boardSize boardSize)) []
 
+
+posFromPoint :: Point -> Maybe Pos
+posFromPoint (Point x y) = let xx = (x - boardBorder) `div` squaresSize
+                               yy = (y - boardBorder) `div` squaresSize
+                            in if xx >= 0 && xx <= 7 && yy >= 0 && yy <= 7
+                                then Just $ Pos (yy,xx)
+                                else Nothing
 
 pos2Board :: Int -> Int
 pos2Board x = x * squaresSize + (boardMargin `div` 2)

@@ -24,19 +24,19 @@ import           Utils
 --    [√] web or GUI
 --    [√] check detection and move selection
 --    [√] mate detection
+--    [√] show possible moves
+--    [√] parallelize the evaluation of the options
 --    [ ] async computation of moves and push notification on completion
 --    [ ] stalemate detection
---    [ ] show possible moves 
 --    [ ] test moves (shows best moves of each player up to the horizon for a given option)
 --    [ ] non-linear game history with bookmarks
 --    [ ] pawn conversion
---    [√] parallelize the move evalution
 --    [ ] save/restore games
 --    [ ] start from predefined states
 --    [ ] gamification: Achievements to learn chess
 
 
--- | Main method !
+-- | Main function!
 main :: IO ()
 main = do
         banner

@@ -69,11 +69,11 @@ minimax state' depth' alpha' beta' b' = if null children
 
 -- | Initial value of Alpha (Must be lower than any result of 'State.evalState')
 initialAlpha :: Int
-initialAlpha = -100000
+initialAlpha = -200000
 
 -- | Initial value of Beta (Must be greater than any result of 'State.evalState')
 initialBeta :: Int
-initialBeta = 100000
+initialBeta = 200000
 
 -- | Depth of the game tree to explore
 defaultDepth :: Int
