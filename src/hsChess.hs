@@ -28,7 +28,8 @@ import           Utils
 --    [√] parallelize the evaluation of the options
 --    [ ] async computation of moves and push notification on completion
 --    [ ] stalemate detection
---    [ ] test moves (shows best moves of each player up to the horizon for a given option)
+--    [ ] enter moves with DnD
+--    [ ] test moves (shows best response moves of each player up to the horizon for a given option)
 --    [ ] non-linear game history with bookmarks
 --    [ ] pawn conversion
 --    [ ] save/restore games

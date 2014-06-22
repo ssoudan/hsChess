@@ -39,8 +39,11 @@ playOpponentWithStrategy option state = case fromMaybe AB option of AB -> AB.doM
 
 
 playTurn :: Options -> String -> SuperState -> SuperState
-playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state && not (isCurrentPlayerMate state)
-                                                                                    then playOpponentWithStrategy (snd3 options) $ applyMove r (fst state) 
+playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state 
+                                                                                    then let stateAfterWhiteTurn = applyMove r (fst state)
+                                                                                          in if isCurrentPlayerMate stateAfterWhiteTurn 
+                                                                                              then stateAfterWhiteTurn
+                                                                                              else playOpponentWithStrategy (snd3 options) stateAfterWhiteTurn 
                                                                                     else state
                                                                         Left _ -> state
 
@@ -65,6 +68,7 @@ gui options = start $ do
                 recommendation  <- staticText f []
                 debug           <- staticText f []
 
+                -- Define the layout of the main frame.
                 set f [ layout :=  margin 10 $ row 2 [ margin 10 $ column 6 [ minsize (sz width height) ( widget boardPanel )
                                                                             , margin 10 $ row 4 [ label "Move: "
                                                                                                 , minsize (sz 200 20) (widget moveInput)
@@ -80,14 +84,15 @@ gui options = start $ do
                                                                                                 , hfill $ widget debug ]]
                                                      , vfill $ minsize (sz 120 height) $ widget moveList ]]
 
+                -- Define the network of events
                 let networkDescription :: forall t. Frameworks t => Moment t ()
                     networkDescription = do
 
-                                            tickE  <- event0 t command
+                                            tickE   <- event0 t command
 
-                                            playE  <- event0 playBtn command
+                                            playE   <- event0 playBtn command
 
-                                            helpE  <- event0 helpBtn command
+                                            helpE   <- event0 helpBtn command
 
                                             moveInB <- behaviorText moveInput ""
                                                                                     
@@ -117,7 +122,7 @@ gui options = start $ do
                                             sink recommendation [ text :== stepper "Nothing" $ (maybe "Start a new game..." (last . getMoveHistoryFromState . fst) . helpPlayer <$> (stateB <@ helpE))
                                                                 , visible :== accumB True $
                                                                                             (pure False <$ playE) `union`
-                                                                                            (pure True <$ helpE)]
+                                                                                            (pure True  <$ helpE)]
 
                                             -- Take care of the current player widget
                                             sink currentPlayer [ text :== (show . getPlayer . fst) <$> stateB ]
@@ -141,11 +146,11 @@ gui options = start $ do
 
                                             sink moveList [ items :== moveHistoryB ]
 
-                                            reactimate $ repaint debug <$ tickE
-                                            reactimate $ repaint boardPanel <$ tickE
-                                            reactimate $ repaint currentPlayer <$ tickE
-                                            reactimate $ repaint currentPlayerStatus <$ tickE
-                                            reactimate $ repaint recommendation <$ unions [ tickE, playE, moveInValidatedE, helpE]
+                                            reactimate $ repaint debug                  <$ tickE
+                                            reactimate $ repaint boardPanel             <$ unions [ tickE, playE, moveInValidatedE ]
+                                            reactimate $ repaint currentPlayer          <$ tickE
+                                            reactimate $ repaint currentPlayerStatus    <$ tickE
+                                            reactimate $ repaint recommendation         <$ unions [ tickE, playE, moveInValidatedE, helpE]
 
                 network <- compile networkDescription
                 actuate network
@@ -161,12 +166,14 @@ showPlayerState playerState | isCheckMate playerState = "CheckMate!"
                             | isCheck playerState = "Check!"
                             | otherwise = "So far so good"
 
+-- | Find the right 'Bitmap' to represent a 'Piece'
 pieceBitmapFor :: Piece -> Bitmap ()
 pieceBitmapFor piece = bitmap $ getDataFile $ show (pieceColor piece) ++ show (pieceType piece) ++ ".png"
 
 drawBmp :: forall a. DC a -> Bitmap () -> Point -> IO ()
 drawBmp dc bmp pos = drawBitmap dc bmp pos True []
 
+-- | draw a 'Square' at a given 'Point'
 drawPiece :: DC a -> (Point, Square) -> IO ()
 drawPiece dc (pos, square) = maybe (return ()) doDraw square
             where doDraw piece = drawBmp dc (pieceBitmapFor piece) pos
@@ -213,18 +220,19 @@ pos2Board x = x * squaresSize + (boardMargin `div` 2)
 
 data GameState = GameState { getSuperState :: SuperState, getMousePosition :: Maybe Pos }
 
--- | Draw a 'Move'
-drawMove :: DC a -> Move -> IO ()
-drawMove dc move = do 
-                    let Pos (ys, xs) = getSource move
-                        Pos (yd, xd) = getDestination move
-                    line dc (point (pos2Board xs + squaresSize `div` 2) (pos2Board ys + squaresSize `div` 2))
-                            (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2))
-                            [color := red]
+-- | Draw a 'Move' as a possible move.
+drawPossibleMove :: DC a -> Move -> IO ()
+drawPossibleMove dc move = do 
+                            let -- Pos (ys, xs) = getSource move
+                                Pos (yd, xd) = getDestination move
+                            circle dc (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2)) pieceMargin [ color := green , brush := BrushStyle BrushSolid green ]
+                            --line dc (point (pos2Board xs + squaresSize `div` 2) (pos2Board ys + squaresSize `div` 2))
+                            --        (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2))
+                            --        [color := red]
 
 -- | Draw a list of 'Move'
 drawPossibleMoves :: [Move] -> DC a -> IO ()
-drawPossibleMoves possibleMoves dc = mapM_ (drawMove dc) possibleMoves
+drawPossibleMoves possibleMoves dc = mapM_ (drawPossibleMove dc) possibleMoves
 
 -- | Draw game state
 drawGameState :: GameState -> DC a -> b -> IO ()

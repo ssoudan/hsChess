@@ -113,8 +113,9 @@ compareOption (s1,_) (s2,_) = s1 `compare` s2
 -- -> player: Black
 -- -> score: 0
 doMove :: SuperState -> SuperState
-doMove s = snd $ optimizeBy (nextStates s)
-     where playerColor = (getPlayer . fst) s
-           optimizeBy state = case playerColor of White -> minimumBy compareOption (myRunPar $ myParMap (`evalOption` True) state)
-                                                  Black -> maximumBy compareOption (myRunPar $ myParMap (`evalOption` False) state)
+doMove s = snd $ optimizeBy options
+     where options = nextStates s
+           playerColor = (getPlayer . fst) s
+           optimizeBy states = case playerColor of White -> minimumBy compareOption (myRunPar $ myParMap (`evalOption` True) states)
+                                                   Black -> maximumBy compareOption (myRunPar $ myParMap (`evalOption` False) states)
 
