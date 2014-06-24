@@ -140,7 +140,7 @@ gui options = start $ do
                                             -- Take care of the move history widget
                                             let
                                                 moveHistoryE :: Event t [String]
-                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ tickE, playE, moveInValidatedE ]
+                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ playE, moveInValidatedE ]
                                                 moveHistoryB :: Behavior t [String]
                                                 moveHistoryB = stepper [] moveHistoryE
 
