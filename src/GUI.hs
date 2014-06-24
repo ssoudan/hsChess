@@ -1,3 +1,9 @@
+{-
+ GUI.hs
+
+ Copyright (c) 2014 by Sebastien Soudan.  
+ Apache License Version 2.0, January 2004
+-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module GUI where
 
@@ -108,7 +114,8 @@ gui options = start $ do
 
                                             -- Catch 'Return' key on 'moveInput' to later use it has an event similar to 'playE'
                                             moveInE <- event1 moveInput keyboard
-                                            let moveInValidatedE = pure (const ()) <@> filterE ((== KeyReturn ) . keyKey) moveInE
+                                            let moveInValidatedE :: Event t ()
+                                                moveInValidatedE = pure (const ()) <@> filterE ((== KeyReturn ) . keyKey) moveInE
 
                                             -- This behavior holds the state of the game
                                             let
