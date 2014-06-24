@@ -17,16 +17,16 @@ do the rest and build a Mac OSX app in dist/build/hsChess.app/ with all the depe
 
 # TODO
 
-- [√] add manual strategy
-- [√] improve UX
-- [√] Mac packaging
-- [√] store the history in the State rather than the latest state (using DList)
-- [√] add castling moves
-- [√] web UI or GUI
-- [√] check detection and move selection
-- [√] mate detection
-- [√] show possible moves
-- [√] parallelize the evaluation of the options
+- [x] add manual strategy
+- [x] improve UX
+- [x] Mac packaging
+- [x] store the history in the State rather than the latest state (using DList)
+- [x] add castling moves
+- [x] web UI or GUI
+- [x] check detection and move selection
+- [x] mate detection
+- [x] show possible moves
+- [x] parallelize the evaluation of the options
 - [ ] async computation of moves and push notification on completion
 - [ ] stalemate detection
 - [ ] enter moves with DnD
