@@ -46,6 +46,15 @@ playOpponentWithStrategy option state = case fromMaybe AB option of AB -> AB.doM
                                                                     ML -> ML.doMove state
                                                                     M -> M.doMove state
 
+asyncPlayTurn :: (Handler SuperState) -> Options -> String -> SuperState -> IO ()
+asyncPlayTurn fireS options m s = do 
+                                    forkIO $ do 
+                                                let !nS = playTurn options m s 
+                                                putStrLn "computation done"
+                                                fireS nS
+                                    putStrLn "launched playTurn computation in a different thread"
+                                    return ()
+
 playTurn :: Options -> String -> SuperState -> SuperState
 playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state 
                                                                                     then let stateAfterWhiteTurn = applyMove r (fst state)
@@ -102,7 +111,8 @@ gui options = start $ do
                 let networkDescription :: forall t. Frameworks t => Moment t ()
                     networkDescription = do
 
-                                            -- Create a behavior out of the MVar
+                                            -- Create a behavior from the handler
+                                            -- This behavior holds the state of the game
                                             stateB  <- fromChanges newSuperState addHandlerS
 
                                             tickE   <- event0 t command
@@ -113,7 +123,7 @@ gui options = start $ do
 
                                             moveInB <- behaviorText moveInput ""
 
-                                            -- mouse pointer position
+                                            -- Mouse pointer position
                                             mouseE <- event1 boardPanel mouse   -- mouse events
                                             let 
                                                 mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
@@ -128,11 +138,6 @@ gui options = start $ do
                                             let moveInValidatedE :: Event t ()
                                                 moveInValidatedE = pure (const ()) <@> filterE ((== KeyReturn ) . keyKey) moveInE
 
-                                            -- This behavior holds the state of the game
-                                            -- let
-                                            --     stateB :: Behavior t SuperState
-                                            --     stateB = accumB newSuperState $ playTurn options <$> (moveInB <@ (playE `union` moveInValidatedE))
-
                                             -- This behavior holds the recommendation
                                             -- The new recommendation is computed on helpE - help button clicked.
                                             -- But the play button hides the recommendation - which is again made visible (after it has been updated
@@ -140,7 +145,7 @@ gui options = start $ do
                                             sink recommendation [ text :== stepper "Nothing" $ (maybe "Start a new game..." (last . getMoveHistoryFromState . fst) . helpPlayer <$> (stateB <@ helpE))
                                                                 , visible :== accumB True $
                                                                                             (pure False <$ playE) `union`
-                                                                                            (pure True  <$ helpE)]
+                                                                                            (pure True  <$ helpE) ]
 
                                             -- Take care of the current player widget
                                             sink currentPlayer [ text :== (show . getPlayer . fst) <$> stateB ]
@@ -156,20 +161,15 @@ gui options = start $ do
                                             sink playBtn [ visible :== (not . isCurrentPlayerMate ) <$> stateB ]
 
                                             -- Take care of the move history widget
-                                            let
-                                                moveHistoryE :: Event t [String]
+                                            let moveHistoryE :: Event t [String]
                                                 moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ playE, moveInValidatedE ]
                                                 moveHistoryB :: Behavior t [String]
                                                 moveHistoryB = stepper [] moveHistoryE
 
                                             sink moveList [ items :== moveHistoryB ]
 
-                                            let m :: Behavior t String
-                                                m = moveInB 
-                                                s :: Behavior t SuperState
-                                                s = stateB 
-                                                t :: Behavior t (IO ())
-                                                t = asyncPlayTurn fireS options <$> m <*> s
+                                            let t :: Behavior t (IO ())
+                                                t = asyncPlayTurn fireS options <$> moveInB <*> stateB
                                             reactimate $ t <@ (playE `union` moveInValidatedE)
 
                                             reactimate $ repaint boardPanel             <$ unions [ tickE, playE, moveInValidatedE ]
@@ -179,15 +179,6 @@ gui options = start $ do
 
                 network <- compile networkDescription
                 actuate network
-
-asyncPlayTurn :: (Handler SuperState) -> Options -> String -> SuperState -> IO ()
-asyncPlayTurn fireS options m s = do 
-                                    forkIO $ do 
-                                                let !nS = playTurn options m s 
-                                                putStrLn "computation done"
-                                                fireS nS
-                                    putStrLn "launched playTurn computation in a different thread"
-                                    return ()
 
 -- | Filters 'EventMouse' to keep only the 'MouseMotion'
 justMotion :: EventMouse -> Maybe Point

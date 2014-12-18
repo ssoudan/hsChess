@@ -69,7 +69,6 @@ executable hsChess
                      reactive-banana-wx,
                      reactive-banana,
                      wx,
---                     wxcore == 0.90.1.1,
                      filepath,
                      executable-path,
                      monad-par, 
