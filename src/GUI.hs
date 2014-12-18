@@ -1,11 +1,11 @@
 {-
  GUI.hs
 
- Copyright (c) 2014 by Sebastien Soudan.  
+ Copyright (c) 2014 by Sebastien Soudan.
  Apache License Version 2.0, January 2004
 -}
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE BangPatterns #-}
 
 module GUI where
 
@@ -18,16 +18,17 @@ import           Reactive.Banana.WX
 
 import           Control.Concurrent
 
-import           Board              (Piece (..), Square, piecePosition, Pos(..))
+import           Board              (Piece (..), Pos (..), Square,
+                                     piecePosition)
 import           GUIUtils
 import           Minimax            as M
 import           MinimaxAlphaBeta   as AB
 import           MinimaxLazy        as ML
+import           Move
 import           MoveParser
 import           Options
 import           State
 import           Utils
-import           Move
 
 height, width, pieceMargin, pieceSize, boardMargin, squaresSize, boardBorder, boardSize :: Int
 pieceSize   = 64
@@ -47,27 +48,27 @@ playOpponentWithStrategy option state = case fromMaybe AB option of AB -> AB.doM
                                                                     M -> M.doMove state
 
 asyncPlayTurn :: (Handler SuperState) -> Options -> String -> SuperState -> IO ()
-asyncPlayTurn fireS options m s = do 
-                                    forkIO $ do 
-                                                let !nS = playTurn options m s 
+asyncPlayTurn fireS options m s = do
+                                    forkIO $ do
+                                                let !nS = playTurn options m s
                                                 putStrLn "computation done"
                                                 fireS nS
                                     putStrLn "launched playTurn computation in a different thread"
                                     return ()
 
 playTurn :: Options -> String -> SuperState -> SuperState
-playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state 
+playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state
                                                                                     then let stateAfterWhiteTurn = applyMove r (fst state)
-                                                                                          in if isCurrentPlayerMate stateAfterWhiteTurn 
+                                                                                          in if isCurrentPlayerMate stateAfterWhiteTurn
                                                                                               then stateAfterWhiteTurn
-                                                                                              else playOpponentWithStrategy (snd3 options) stateAfterWhiteTurn 
+                                                                                              else playOpponentWithStrategy (snd3 options) stateAfterWhiteTurn
                                                                                     else state
                                                                         Left _ -> state
 
 
 helpPlayer :: SuperState -> Maybe SuperState
-helpPlayer state = if isCurrentPlayerMate state 
-                    then Nothing 
+helpPlayer state = if isCurrentPlayerMate state
+                    then Nothing
                     else let state' = AB.doMove state
                           in trace (show state') $ Just state'
 
@@ -86,8 +87,6 @@ gui options = start $ do
                 recommendation  <- staticText f []
                 debug           <- staticText f []
 
-                -- thinking        <- staticText f []
-
                 -- Define the layout of the main frame.
                 set f [ layout :=  margin 10 $ row 2 [ margin 10 $ column 6 [ minsize (sz width height) ( widget boardPanel )
                                                                             , margin 10 $ row 4 [ label "Move: "
@@ -104,7 +103,7 @@ gui options = start $ do
                                                                                                 , hfill $ widget debug ]]
                                                      , vfill $ minsize (sz 120 height) $ widget moveList ]]
 
-                -- Create the new handler
+                -- Create a new handler for the async computation of the new state
                 (addHandlerS, fireS) <- newAddHandler
 
                 -- Define the network of events
@@ -125,8 +124,7 @@ gui options = start $ do
 
                                             -- Mouse pointer position
                                             mouseE <- event1 boardPanel mouse   -- mouse events
-                                            let 
-                                                mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
+                                            let mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
 
                                                 activeCellB :: Behavior t (Maybe Pos)
                                                 activeCellB = posFromPoint <$> mouseB
@@ -208,9 +206,9 @@ drawBoard :: forall t a. DC a -> t -> IO ()
 drawBoard dc _view = do
                         let
                             labelPosition :: Int -> Int
-                            labelPosition p   = boardBorder + squaresSize `div` 2 + p * squaresSize                            
+                            labelPosition p   = boardBorder + squaresSize `div` 2 + p * squaresSize
                             labelFixedPosition :: Int
-                            labelFixedPosition = boardBorder `div` 2                            
+                            labelFixedPosition = boardBorder `div` 2
                             figures :: [(Int, Char)]
                             figures = zip [0..7::Int] ['0'..]
                             letters :: [(Int, Char)]
@@ -247,7 +245,7 @@ data GameState = GameState { getSuperState :: SuperState, getMousePosition :: Ma
 
 -- | Draw a 'Move' as a possible move.
 drawPossibleMove :: DC a -> Move -> IO ()
-drawPossibleMove dc move = do 
+drawPossibleMove dc move = do
                             let -- Pos (ys, xs) = getSource move
                                 Pos (yd, xd) = getDestination move
                             circle dc (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2)) pieceMargin [ color := green , brush := BrushStyle BrushSolid green ]
