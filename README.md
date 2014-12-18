@@ -27,7 +27,7 @@ do the rest and build a Mac OSX app in dist/build/hsChess.app/ with all the depe
 - [x] mate detection
 - [x] show possible moves
 - [x] parallelize the evaluation of the options
-- [ ] async computation of moves and push notification on completion
+- [x] async computation of moves and push notification on completion
 - [ ] stalemate detection
 - [ ] enter moves with DnD
 - [ ] test moves (shows best response moves of each player up to the horizon for a given option)

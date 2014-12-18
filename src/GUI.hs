@@ -5,6 +5,8 @@
  Apache License Version 2.0, January 2004
 -}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns #-}
+
 module GUI where
 
 
@@ -14,6 +16,7 @@ import           Graphics.UI.WX     hiding (Event)
 import           Reactive.Banana
 import           Reactive.Banana.WX
 
+import           Control.Concurrent
 
 import           Board              (Piece (..), Square, piecePosition, Pos(..))
 import           GUIUtils
@@ -43,7 +46,6 @@ playOpponentWithStrategy option state = case fromMaybe AB option of AB -> AB.doM
                                                                     ML -> ML.doMove state
                                                                     M -> M.doMove state
 
-
 playTurn :: Options -> String -> SuperState -> SuperState
 playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state 
                                                                                     then let stateAfterWhiteTurn = applyMove r (fst state)
@@ -52,6 +54,7 @@ playTurn options move state = trace "playTurn" $ case parseMove move of Right r 
                                                                                               else playOpponentWithStrategy (snd3 options) stateAfterWhiteTurn 
                                                                                     else state
                                                                         Left _ -> state
+
 
 helpPlayer :: SuperState -> Maybe SuperState
 helpPlayer state = if isCurrentPlayerMate state 
@@ -74,6 +77,8 @@ gui options = start $ do
                 recommendation  <- staticText f []
                 debug           <- staticText f []
 
+                -- thinking        <- staticText f []
+
                 -- Define the layout of the main frame.
                 set f [ layout :=  margin 10 $ row 2 [ margin 10 $ column 6 [ minsize (sz width height) ( widget boardPanel )
                                                                             , margin 10 $ row 4 [ label "Move: "
@@ -90,9 +95,15 @@ gui options = start $ do
                                                                                                 , hfill $ widget debug ]]
                                                      , vfill $ minsize (sz 120 height) $ widget moveList ]]
 
+                -- Create the new handler
+                (addHandlerS, fireS) <- newAddHandler
+
                 -- Define the network of events
                 let networkDescription :: forall t. Frameworks t => Moment t ()
                     networkDescription = do
+
+                                            -- Create a behavior out of the MVar
+                                            stateB  <- fromChanges newSuperState addHandlerS
 
                                             tickE   <- event0 t command
 
@@ -101,7 +112,7 @@ gui options = start $ do
                                             helpE   <- event0 helpBtn command
 
                                             moveInB <- behaviorText moveInput ""
-                                                                                    
+
                                             -- mouse pointer position
                                             mouseE <- event1 boardPanel mouse   -- mouse events
                                             let 
@@ -118,9 +129,9 @@ gui options = start $ do
                                                 moveInValidatedE = pure (const ()) <@> filterE ((== KeyReturn ) . keyKey) moveInE
 
                                             -- This behavior holds the state of the game
-                                            let
-                                                stateB :: Behavior t SuperState
-                                                stateB = accumB newSuperState $ playTurn options <$> (moveInB <@ (playE `union` moveInValidatedE))
+                                            -- let
+                                            --     stateB :: Behavior t SuperState
+                                            --     stateB = accumB newSuperState $ playTurn options <$> (moveInB <@ (playE `union` moveInValidatedE))
 
                                             -- This behavior holds the recommendation
                                             -- The new recommendation is computed on helpE - help button clicked.
@@ -153,7 +164,14 @@ gui options = start $ do
 
                                             sink moveList [ items :== moveHistoryB ]
 
-                                            reactimate $ repaint debug                  <$ tickE
+                                            let m :: Behavior t String
+                                                m = moveInB 
+                                                s :: Behavior t SuperState
+                                                s = stateB 
+                                                t :: Behavior t (IO ())
+                                                t = asyncPlayTurn fireS options <$> m <*> s
+                                            reactimate $ t <@ (playE `union` moveInValidatedE)
+
                                             reactimate $ repaint boardPanel             <$ unions [ tickE, playE, moveInValidatedE ]
                                             reactimate $ repaint currentPlayer          <$ tickE
                                             reactimate $ repaint currentPlayerStatus    <$ tickE
@@ -161,6 +179,15 @@ gui options = start $ do
 
                 network <- compile networkDescription
                 actuate network
+
+asyncPlayTurn :: (Handler SuperState) -> Options -> String -> SuperState -> IO ()
+asyncPlayTurn fireS options m s = do 
+                                    forkIO $ do 
+                                                let !nS = playTurn options m s 
+                                                putStrLn "computation done"
+                                                fireS nS
+                                    putStrLn "launched playTurn computation in a different thread"
+                                    return ()
 
 -- | Filters 'EventMouse' to keep only the 'MouseMotion'
 justMotion :: EventMouse -> Maybe Point
