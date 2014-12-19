@@ -108,22 +108,22 @@ getDestination CastleWhiteRight = Pos (7,0)
 getDestination CastleWhiteLeft = Pos (7,7)
 
 instance Eq Move where
-  CastleBlackLeft == n = case n of CastleBlackLeft -> True
-                                   _ -> False
+  CastleBlackLeft == n  = case n of CastleBlackLeft -> True
+                                    _ -> False
   CastleBlackRight == n = case n of CastleBlackRight -> True
                                     _ -> False
-  CastleWhiteLeft == n = case n of CastleWhiteLeft -> True
-                                   _ -> False
+  CastleWhiteLeft == n  = case n of CastleWhiteLeft -> True
+                                    _ -> False
   CastleWhiteRight == n = case n of CastleWhiteRight -> True
                                     _ -> False
-  m == n = getSource m == getSource n && getDestination m == getDestination n
+  m == n                = getSource m == getSource n && getDestination m == getDestination n
 
 instance Show Move where
-  show (Move s d) = showPos s ++ showPos d
+  show (Move s d)       = showPos s ++ showPos d
   show CastleBlackRight = "brc"
-  show CastleBlackLeft = "blc"
+  show CastleBlackLeft  = "blc"
   show CastleWhiteRight = "wrc"
-  show CastleWhiteLeft = "wlc"
+  show CastleWhiteLeft  = "wlc"
 
 -- | Create a new Move record
 makeMove :: Pos -> Pos -> Move
@@ -138,12 +138,12 @@ makeMove = Move
 genValidMoves :: Pos -> Board -> [Move]
 genValidMoves origin board = let (Just (Piece pt color)) = elementAt origin board
                            in let opt = case pt of Pawn -> makePawnLegalMoves color origin board
-                                                   _ -> filter boardFilter (movesAtPosition origin pt) \\ [origin]
+                                                   _    -> filter boardFilter (movesAtPosition origin pt) \\ [origin]
                                   forbidden = case pt of Knight -> colorPos color board
-                                                         Pawn -> [] -- makePawnLegalMoves already excludes the position of the other player
-                                                         King -> colorPos color board
-                                                         Queen -> forbiddenHorizon origin color board
-                                                         Rook -> forbiddenHorizon origin color board
+                                                         Pawn   -> [] -- makePawnLegalMoves already excludes the position of the other player
+                                                         King   -> colorPos color board
+                                                         Queen  -> forbiddenHorizon origin color board
+                                                         Rook   -> forbiddenHorizon origin color board
                                                          Bishop -> forbiddenHorizon origin color board
                                in map (makeMove origin) $ opt \\ forbidden
 
@@ -155,10 +155,10 @@ applyMoveOnBoard :: Board -> Move -> Board
 applyMoveOnBoard board (Move s d) = movePieceOnBoard board s d
 applyMoveOnBoard board CastleWhiteRight = let board' = movePieceOnBoard board (Pos (7,4)) (Pos (7,6))
                                            in movePieceOnBoard board' (Pos (7,7)) (Pos (7,5))
-applyMoveOnBoard board CastleWhiteLeft = let board' = movePieceOnBoard board (Pos (7,4)) (Pos (7,2))
-                                          in movePieceOnBoard board' (Pos (7,0)) (Pos (7,3))
+applyMoveOnBoard board CastleWhiteLeft  = let board' = movePieceOnBoard board (Pos (7,4)) (Pos (7,2))
+                                           in movePieceOnBoard board' (Pos (7,0)) (Pos (7,3))
 applyMoveOnBoard board CastleBlackRight = let board' = movePieceOnBoard board (Pos (0,4)) (Pos (0,2))
                                            in movePieceOnBoard board' (Pos (0,0)) (Pos (0,3))
-applyMoveOnBoard board CastleBlackLeft = let board' = movePieceOnBoard board (Pos (0,4)) (Pos (0,6))
-                                          in movePieceOnBoard board' (Pos (0,7)) (Pos (0,5))
+applyMoveOnBoard board CastleBlackLeft  = let board' = movePieceOnBoard board (Pos (0,4)) (Pos (0,6))
+                                           in movePieceOnBoard board' (Pos (0,7)) (Pos (0,5))
 

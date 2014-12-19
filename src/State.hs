@@ -164,19 +164,19 @@ genBasicMoves board playerColor = let pieces = colorPos playerColor board
 -- | Generate all the possible moves
 --
 genAllMoves :: State -> [Move]
-genAllMoves state                         = let playerColor = getPlayer state
-                                                playerState = currentPlayerState state
-                                                board = getBoard state
-                                                allMoves = genBasicMoves board playerColor ++ castleMoves playerColor playerState board
-                                                currentPlayerState = case playerColor of White -> getWhiteState
-                                                                                         Black -> getBlackState
-                                                stillCheck = not . isCheck . currentPlayerState . fst . (`applyMove` state)
-                                             in 
-                                               if isCheck playerState
-                                                -- in case of check, filter out the move that keep the player check
-                                                then filter stillCheck allMoves 
-                                                -- else, return all the moves
-                                                else allMoves
+genAllMoves state               = let playerColor = getPlayer state
+                                      playerState = currentPlayerState state
+                                      board = getBoard state
+                                      allMoves = genBasicMoves board playerColor ++ castleMoves playerColor playerState board
+                                      currentPlayerState = case playerColor of White -> getWhiteState
+                                                                               Black -> getBlackState
+                                      stillCheck = not . isCheck . currentPlayerState . fst . (`applyMove` state)
+                                   in 
+                                     if isCheck playerState
+                                      -- in case of check, filter out the move that keep the player check
+                                      then filter stillCheck allMoves 
+                                      -- else, return all the moves
+                                      else allMoves
 
 -- | True if the 'Move' is valid for the 'SuperState' 
 validMove :: Move -> SuperState -> Bool

@@ -9,7 +9,6 @@
 
 module GUI where
 
-
 import           Data.Maybe         (fromMaybe)
 import           Debug.Trace
 import           Graphics.UI.WX     hiding (Event)
@@ -49,7 +48,7 @@ boardBorder = boardMargin `div` 2
 asyncPlayTurn :: (Handler SuperState) -> Options -> String -> SuperState -> IO ()
 asyncPlayTurn fireS options m s = do
                                     _ <- ($)
-                                        forkIO $ do 
+                                        forkIO $ do
                                                     let !nS = playTurn options m s
                                                     putStrLn "computation done"
                                                     fireS nS
@@ -145,7 +144,7 @@ gui options = start $ do
 
                                             -- All mouse related events
                                             mouseE <- event1 boardPanel mouse
-                                            let 
+                                            let
                                                 -- Mouse pointer position behavior
                                                 mouseB :: Behavior t Point
                                                 mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
@@ -155,8 +154,8 @@ gui options = start $ do
                                                 activeCellB = posFromPoint <$> mouseB
 
                                             -- Drag and drop
-                                            let 
-                                                -- Current state of the DnD process 
+                                            let
+                                                -- Current state of the DnD process
                                                 dndStateE :: Event t DnD
                                                 dndStateE = accumE initialDnDState $ updateDnDFSM <$> mouseE
 
@@ -168,13 +167,13 @@ gui options = start $ do
 
                                             -- Catch 'Return' key on 'moveInput' to later use it has an event similar to 'playE'
                                             moveInE <- event1 moveInput keyboard
-                                            let 
+                                            let
                                                 moveInValidatedE :: Event t ()
                                                 moveInValidatedE = pure (const ()) <@> filterE ((== KeyReturn ) . keyKey) moveInE
 
                                             -- This behavior holds the recommendation
                                             -- The new recommendation is computed on helpE - help button clicked.
-                                            -- But the play button hides the recommendation - which is again made visible 
+                                            -- But the play button hides the recommendation - which is again made visible
                                             -- (after it has been updated if we click again on 'help')
                                             sink recommendation [ text :== stepper "Nothing" $ (maybe "Start a new game..." (last . getMoveHistoryFromState . fst) . helpPlayer <$> (stateB <@ helpE))
                                                                 , visible :== accumB True $ (pure False <$ playE) `union`
@@ -194,7 +193,7 @@ gui options = start $ do
                                             sink playBtn [ visible :== (not . isCurrentPlayerMate ) <$> stateB ]
 
                                             -- Take care of the move history widget
-                                            let 
+                                            let
                                                 moveHistoryE :: Event t [String]
                                                 moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ playE, moveInValidatedE ]
                                                 moveHistoryB :: Behavior t [String]
@@ -203,10 +202,10 @@ gui options = start $ do
                                             sink moveList [ items :== moveHistoryB ]
 
                                             -- Take care of the DnD driven moves
-                                            let 
+                                            let
                                                 asyncPlayTurnFromDnD :: SuperState -> DnD -> IO ()
                                                 asyncPlayTurnFromDnD s m = asyncPlayTurn fireS options (dndToMove m) s
-                                                
+
                                                 asyncPlayTurnFromDnDB :: Behavior t (DnD -> IO ())
                                                 asyncPlayTurnFromDnDB = asyncPlayTurnFromDnD <$> stateB
 
@@ -216,7 +215,7 @@ gui options = start $ do
                                             reactimate $ asyncPlayTurnFromDnDE
 
                                             -- Take care of the manually entered moves (still needed for castling)
-                                            let 
+                                            let
                                                 asyncPlayTurnB :: Behavior t (IO ())
                                                 asyncPlayTurnB = asyncPlayTurn fireS options <$> moveInB <*> stateB
                                             reactimate $ asyncPlayTurnB <@ (playE `union` moveInValidatedE)
@@ -302,10 +301,10 @@ pos2Board x = x * squaresSize + (boardMargin `div` 2)
 
 
 ---------------
--- Game state 
+-- Game state
 ---------------
-data GameState = GameState { getSuperState :: SuperState
-                           , getMousePosition :: Maybe Pos 
+data GameState = GameState { getSuperState    :: SuperState
+                           , getMousePosition :: Maybe Pos
                            }
 
 -- | Draw a 'Move' as a possible move.
@@ -313,8 +312,8 @@ drawPossibleMove :: DC a -> Move -> IO ()
 drawPossibleMove dc move = do
                             let Pos (yd, xd) = getDestination move
                             circle dc
-                                  (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2)) 
-                                  pieceMargin [ color := green 
+                                  (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2))
+                                  pieceMargin [ color := green
                                               , brush := BrushStyle BrushSolid green ]
 
 -- | Draw a list of 'Move'
@@ -350,46 +349,32 @@ data DnDState = Inactive
               | Complete
               deriving (Show, Eq)
 
-data DnD = DnD { getDndState :: DnDState
-               , getDndOrigin :: Maybe Pos
-               , getDnDDestination :: Maybe Pos 
+data DnD = DnD { getDndState       :: DnDState
+               , getDndOrigin      :: Maybe Pos
+               , getDnDDestination :: Maybe Pos
                } deriving Show
 
 
--- | Create a new initial DnD 
+-- | Create a new initial DnD
 initialDnDState :: DnD
 initialDnDState = DnD Inactive Nothing Nothing
 
 -- | FSM for the DnD
 updateDnDFSM :: EventMouse -> DnD -> DnD
-updateDnDFSM mouseEvent state = case (mouseEvent, getDndState state) of 
-                                                      (_, Complete)                     -> DnD Inactive Nothing Nothing
-                                                      -- (MouseMotion _ _, Inactive)       -> state
-                                                      -- (MouseMotion _ _, InProgress)     -> state
-                                                      -- (MouseMotion _ _, Complete)       -> DnD Inactive Nothing Nothing
-                                                      -- (MouseEnter _ _, _)            -> state
-                                                      -- (MouseLeave _ _, _)            -> state
-                                                      -- (MouseLeftDown _ _, _)            -> trace "MouseLeftDown" state
-                                                      (MouseLeftUp p _, InProgress)     -> trace "MouseLeftUp - InProgress" $ DnD Complete (getDndOrigin state) (posFromPoint p)
-                                                      -- (MouseLeftUp _ _, _)              -> trace "MouseLeftUp" state
-                                                      -- (MouseLeftDClick _ _, _)          -> trace "MouseLeftDClick" state
-                                                      -- (MouseLeftDrag p _, Complete)     -> trace "MouseLeftDrag - Complete" $ DnD InProgress (posFromPoint p) Nothing
-                                                      (MouseLeftDrag p _, Inactive)     -> trace "MouseLeftDrag - Complete" $ DnD InProgress (posFromPoint p) Nothing
-                                                      -- (MouseLeftDrag p _, Inactive)     -> state
-                                                      -- (MouseLeftDrag _ _, InProgress)   -> trace "MouseLeftDrag - InProgress" $ state
-                                                      -- (MouseRightDown _ _, _) -> state
-                                                      -- (MouseRightUp _ _, _) -> state
-                                                      -- (MouseRightDClick _ _, _) -> state
-                                                      -- (MouseRightDrag _ _, _) -> state
-                                                      -- (MouseMiddleDown _ _, _) -> state
-                                                      -- (MouseMiddleUp _ _, _) -> state
-                                                      -- (MouseMiddleDClick _ _, _) -> state
-                                                      -- (MouseMiddleDrag _ _, _) -> state
-                                                      -- (MouseWheel _ _ _, _) -> state
-                                                      (_, _) -> state
+updateDnDFSM mouseEvent state = case (mouseEvent, getDndState state) of
+                              (_, Complete)                 -> DnD Inactive                 -- get ready for a new DnD
+                                                                       Nothing
+                                                                       Nothing
+                              (MouseLeftUp p _, InProgress) -> DnD Complete                 -- we change the state
+                                                                       (getDndOrigin state) -- keep the source
+                                                                       (posFromPoint p)     -- but update the destination
+                              (MouseLeftDrag p _, Inactive) -> DnD InProgress               -- new DnD started
+                                                                       (posFromPoint p)     -- record the origin
+                                                                       Nothing
+                              (_, _)                        -> state
 
 -- | Convert a (complete) 'DnD' into the 'String' representing a 'Move'
 dndToMove :: DnD -> String
-dndToMove (DnD Complete (Just source) (Just dest)) = let m = makeMove source dest 
-                                                      in trace ("dnd move is " ++ show m) show $ m
+dndToMove (DnD Complete (Just source) (Just dest)) = let m = makeMove source dest
+                                                      in trace ("dnd move is " ++ show m) show m
 dndToMove (DnD _ _ _) = ""

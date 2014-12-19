@@ -17,7 +17,9 @@ import           Board     (PieceColor (..))
 import           Data.List
 import           State
 
-data GameTree = GameTree { getState :: SuperState, getGameTree :: [GameTree]} deriving Show
+data GameTree = GameTree { getState :: SuperState
+                         , getGameTree :: [GameTree]
+                         } deriving Show
 
 -- | Evaluate the payoff of a 'GameTree'
 play :: GameTree->Int
