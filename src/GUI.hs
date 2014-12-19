@@ -42,20 +42,18 @@ width       = height + boardMargin
 boardBorder = boardMargin `div` 2
 
 
-playOpponentWithStrategy :: Maybe OpponentOption -> SuperState -> SuperState
-playOpponentWithStrategy option state = case fromMaybe AB option of AB -> AB.doMove state
-                                                                    ML -> ML.doMove state
-                                                                    M -> M.doMove state
-
+-- | Async computation of the moves (player + AI)
 asyncPlayTurn :: (Handler SuperState) -> Options -> String -> SuperState -> IO ()
 asyncPlayTurn fireS options m s = do
-                                    forkIO $ do
-                                                let !nS = playTurn options m s
-                                                putStrLn "computation done"
-                                                fireS nS
+                                    _ <- ($)
+                                        forkIO $ do 
+                                                    let !nS = playTurn options m s
+                                                    putStrLn "computation done"
+                                                    fireS nS
                                     putStrLn "launched playTurn computation in a different thread"
                                     return ()
 
+-- | Do the player's move plus the AI's move
 playTurn :: Options -> String -> SuperState -> SuperState
 playTurn options move state = trace "playTurn" $ case parseMove move of Right r -> if validMove r state
                                                                                     then let stateAfterWhiteTurn = applyMove r (fst state)
@@ -64,8 +62,13 @@ playTurn options move state = trace "playTurn" $ case parseMove move of Right r 
                                                                                               else playOpponentWithStrategy (snd3 options) stateAfterWhiteTurn
                                                                                     else state
                                                                         Left _ -> state
+                        where -- Play AI move
+                              playOpponentWithStrategy :: Maybe OpponentOption -> SuperState -> SuperState
+                              playOpponentWithStrategy option s = case fromMaybe AB option of AB -> AB.doMove s
+                                                                                              ML -> ML.doMove s
+                                                                                              M -> M.doMove s
 
-
+-- | Compute the recommendation for the player based on current state
 helpPlayer :: SuperState -> Maybe SuperState
 helpPlayer state = if isCurrentPlayerMate state
                     then Nothing
@@ -124,16 +127,26 @@ gui options = start $ do
 
                                             -- Mouse pointer position
                                             mouseE <- event1 boardPanel mouse   -- mouse events
-                                            let mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
+                                            let 
+                                                mouseB :: Behavior t Point
+                                                mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
 
                                                 activeCellB :: Behavior t (Maybe Pos)
                                                 activeCellB = posFromPoint <$> mouseB
 
-                                            sink debug [ text :== stepper "" $ show <$> (activeCellB <@ mouseE) ]
+                                            -- Drag and drop
+                                            let 
+                                                dndE :: Event t DnD
+                                                dndE = accumE initialDnDState $ updateDnD <$> mouseE
+                                                completedDndE :: Event t DnD
+                                                completedDndE = filterE ((== Complete) . getDndState) dndE
+
+                                            sink debug [ text :== stepper "" $ show <$> completedDndE ]
 
                                             -- Catch 'Return' key on 'moveInput' to later use it has an event similar to 'playE'
                                             moveInE <- event1 moveInput keyboard
-                                            let moveInValidatedE :: Event t ()
+                                            let 
+                                                moveInValidatedE :: Event t ()
                                                 moveInValidatedE = pure (const ()) <@> filterE ((== KeyReturn ) . keyKey) moveInE
 
                                             -- This behavior holds the recommendation
@@ -141,8 +154,7 @@ gui options = start $ do
                                             -- But the play button hides the recommendation - which is again made visible (after it has been updated
                                             -- if we click again on 'help')
                                             sink recommendation [ text :== stepper "Nothing" $ (maybe "Start a new game..." (last . getMoveHistoryFromState . fst) . helpPlayer <$> (stateB <@ helpE))
-                                                                , visible :== accumB True $
-                                                                                            (pure False <$ playE) `union`
+                                                                , visible :== accumB True $ (pure False <$ playE) `union`
                                                                                             (pure True  <$ helpE) ]
 
                                             -- Take care of the current player widget
@@ -159,16 +171,32 @@ gui options = start $ do
                                             sink playBtn [ visible :== (not . isCurrentPlayerMate ) <$> stateB ]
 
                                             -- Take care of the move history widget
-                                            let moveHistoryE :: Event t [String]
+                                            let 
+                                                moveHistoryE :: Event t [String]
                                                 moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ playE, moveInValidatedE ]
                                                 moveHistoryB :: Behavior t [String]
                                                 moveHistoryB = stepper [] moveHistoryE
 
                                             sink moveList [ items :== moveHistoryB ]
 
-                                            let t :: Behavior t (IO ())
-                                                t = asyncPlayTurn fireS options <$> moveInB <*> stateB
-                                            reactimate $ t <@ (playE `union` moveInValidatedE)
+                                            -- Take care of the DnD driven moves
+                                            let 
+                                                asyncPlayTurnFromDnD :: SuperState -> DnD -> IO ()
+                                                asyncPlayTurnFromDnD s m = asyncPlayTurn fireS options (dndToMove m) s
+                                                
+                                                asyncPlayTurnFromDnDB :: Behavior t (DnD -> IO ())
+                                                asyncPlayTurnFromDnDB = asyncPlayTurnFromDnD <$> stateB
+
+                                                asyncPlayTurnFromDnDE :: Event t (IO ())
+                                                asyncPlayTurnFromDnDE = asyncPlayTurnFromDnDB <@> completedDndE
+
+                                            reactimate $ asyncPlayTurnFromDnDE
+
+                                            -- Take care of the manually entered moves (still needed for castling)
+                                            let 
+                                                asyncPlayTurnB :: Behavior t (IO ())
+                                                asyncPlayTurnB = asyncPlayTurn fireS options <$> moveInB <*> stateB
+                                            reactimate $ asyncPlayTurnB <@ (playE `union` moveInValidatedE)
 
                                             reactimate $ repaint boardPanel             <$ unions [ tickE, playE, moveInValidatedE ]
                                             reactimate $ repaint currentPlayer          <$ tickE
@@ -176,7 +204,15 @@ gui options = start $ do
                                             reactimate $ repaint recommendation         <$ unions [ tickE, playE, moveInValidatedE, helpE]
 
                 network <- compile networkDescription
+                -- networkRepr <- showNetwork network
+                -- putStrLn networkRepr
                 actuate network
+
+dndToMove :: DnD -> String
+dndToMove (DnD Complete (Just source) (Just dest)) = let m = makeMove source dest 
+                                                      in trace ("dnd move is " ++ show m) show $ m
+dndToMove (DnD _ _ _) = ""
+
 
 -- | Filters 'EventMouse' to keep only the 'MouseMotion'
 justMotion :: EventMouse -> Maybe Point
@@ -196,7 +232,7 @@ pieceBitmapFor piece = bitmap $ getDataFile $ show (pieceColor piece) ++ show (p
 drawBmp :: forall a. DC a -> Bitmap () -> Point -> IO ()
 drawBmp dc bmp pos = drawBitmap dc bmp pos True []
 
--- | draw a 'Square' at a given 'Point'
+-- | Draw a 'Square' at a given 'Point'
 drawPiece :: DC a -> (Point, Square) -> IO ()
 drawPiece dc (pos, square) = maybe (return ()) doDraw square
             where doDraw piece = drawBmp dc (pieceBitmapFor piece) pos
@@ -230,17 +266,62 @@ drawBoard dc _view = do
                         -- add a border to the board
                         drawRect dc (rect (point boardBorder boardBorder) (sz boardSize boardSize)) []
 
-
 posFromPoint :: Point -> Maybe Pos
 posFromPoint (Point x y) = let xx = (x - boardBorder) `div` squaresSize
                                yy = (y - boardBorder) `div` squaresSize
                             in if xx >= 0 && xx <= 7 && yy >= 0 && yy <= 7
-                                then Just $ Pos (yy,xx)
+                                then Just $ Pos (yy, xx)
                                 else Nothing
 
 pos2Board :: Int -> Int
 pos2Board x = x * squaresSize + (boardMargin `div` 2)
 
+
+---------------
+-- Drag n Drop
+---------------
+data DnDState = Inactive
+              | InProgress
+              | Complete
+              deriving (Show, Eq)
+
+data DnD = DnD { getDndState :: DnDState, getDndOrigin :: Maybe Pos , getDnDDestination :: Maybe Pos } deriving Show
+
+
+initialDnDState :: DnD
+initialDnDState = DnD Inactive Nothing Nothing
+
+updateDnD :: EventMouse -> DnD -> DnD
+updateDnD mouseEvent state = case (mouseEvent, getDndState state) of 
+                                                      (_, Complete)                     -> DnD Inactive Nothing Nothing
+                                                      -- (MouseMotion _ _, Inactive)       -> state
+                                                      -- (MouseMotion _ _, InProgress)     -> state
+                                                      -- (MouseMotion _ _, Complete)       -> DnD Inactive Nothing Nothing
+                                                      -- (MouseEnter _ _, _)            -> state
+                                                      -- (MouseLeave _ _, _)            -> state
+                                                      -- (MouseLeftDown _ _, _)            -> trace "MouseLeftDown" state
+                                                      (MouseLeftUp p _, InProgress)     -> trace "MouseLeftUp - InProgress" $ DnD Complete (getDndOrigin state) (posFromPoint p)
+                                                      -- (MouseLeftUp _ _, _)              -> trace "MouseLeftUp" state
+                                                      -- (MouseLeftDClick _ _, _)          -> trace "MouseLeftDClick" state
+                                                      -- (MouseLeftDrag p _, Complete)     -> trace "MouseLeftDrag - Complete" $ DnD InProgress (posFromPoint p) Nothing
+                                                      (MouseLeftDrag p _, Inactive)     -> trace "MouseLeftDrag - Complete" $ DnD InProgress (posFromPoint p) Nothing
+                                                      -- (MouseLeftDrag p _, Inactive)     -> state
+                                                      -- (MouseLeftDrag _ _, InProgress)   -> trace "MouseLeftDrag - InProgress" $ state
+                                                      -- (MouseRightDown _ _, _) -> state
+                                                      -- (MouseRightUp _ _, _) -> state
+                                                      -- (MouseRightDClick _ _, _) -> state
+                                                      -- (MouseRightDrag _ _, _) -> state
+                                                      -- (MouseMiddleDown _ _, _) -> state
+                                                      -- (MouseMiddleUp _ _, _) -> state
+                                                      -- (MouseMiddleDClick _ _, _) -> state
+                                                      -- (MouseMiddleDrag _ _, _) -> state
+                                                      -- (MouseWheel _ _ _, _) -> state
+                                                      (_, _) -> state
+
+
+---------------
+-- Game state 
+---------------
 data GameState = GameState { getSuperState :: SuperState, getMousePosition :: Maybe Pos }
 
 -- | Draw a 'Move' as a possible move.
