@@ -45,16 +45,16 @@ parseMove = parse (choice [doParseWLCastle, doParseWRCastle, doParseBLCastle, do
             colToInt :: Char -> Int
             colToInt = digitToInt
             doParseWLCastle = do 
-                                 try $ string "wlc"
+                                 _ <- ($) try $ string "wlc"
                                  return CastleWhiteLeft
             doParseWRCastle = do 
-                                 try $ string "wrc"
+                                 _ <- ($) try $ string "wrc"
                                  return CastleWhiteRight
             doParseBLCastle = do 
-                                 try $ string "blc"
+                                 _ <- ($) try $ string "blc"
                                  return CastleBlackLeft
             doParseBRCastle = do 
-                                 try $ string "brc"
+                                 _ <- ($) try $ string "brc"
                                  return CastleBlackRight
 
 

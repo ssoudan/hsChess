@@ -16,7 +16,7 @@ version:             0.1.0.0
 synopsis:            Not yet very clear.
 
 -- A longer description of the package.
--- description:         
+description:         Chess game with an AI and a UI in reactive-banana-wx
 
 -- URL for the project homepage or repository.
 homepage:            http://github.com/ssoudan/hsChess
@@ -35,7 +35,7 @@ author:              Sebastien Soudan
 maintainer:          sebastien.soudan@gmail.com
 
 -- A copyright notice.
--- copyright:           
+copyright:           Sebastien Soudan, 2014
 
 category:            Game
 
@@ -80,7 +80,7 @@ executable hsChess
   -- Base language which the package is written in.
   default-language:  Haskell2010
 
-  ghc-options:        -threaded -O2 -static -with-rtsopts=-N
+  ghc-options:        -threaded -O2 -static -with-rtsopts=-N -Wall
   -- ghc-options:     -O2 -rtsopts -eventlog
   -- ghc-options:       -O2 -rtsopts -prof -fprof-auto 
   -- ld-options:      -static -pthread
@@ -90,14 +90,14 @@ source-repository head
   type:              git 
   location:          https://github.com/ssoudan/hsChess.git
 
--- test-suite hsChess-tests
---   type:              exitcode-stdio-1.0
---   hs-source-dirs:    test, src
---   main-is:           MainTestSuite.hs
---   build-depends:     base,
---                      HUnit,
---                      QuickCheck,
---                      test-framework,
---                      test-framework-hunit,
---                      test-framework-quickcheck2
---   default-language:  Haskell2010
+test-suite hsChess-tests
+  type:              exitcode-stdio-1.0
+  hs-source-dirs:    test, src
+  main-is:           MainTestSuite.hs
+  build-depends:     base,
+                     HUnit,
+                     QuickCheck,
+                     test-framework,
+                     test-framework-hunit,
+                     test-framework-quickcheck2
+  default-language:  Haskell2010

@@ -41,6 +41,9 @@ height      = boardSize + boardMargin
 width       = height + boardMargin
 boardBorder = boardMargin `div` 2
 
+---------------
+-- Play turns
+---------------
 
 -- | Async computation of the moves (player + AI)
 asyncPlayTurn :: (Handler SuperState) -> Options -> String -> SuperState -> IO ()
@@ -68,6 +71,11 @@ playTurn options move state = trace "playTurn" $ case parseMove move of Right r 
                                                                                               ML -> ML.doMove s
                                                                                               M -> M.doMove s
 
+
+---------------
+-- Helper
+---------------
+
 -- | Compute the recommendation for the player based on current state
 helpPlayer :: SuperState -> Maybe SuperState
 helpPlayer state = if isCurrentPlayerMate state
@@ -75,6 +83,12 @@ helpPlayer state = if isCurrentPlayerMate state
                     else let state' = AB.doMove state
                           in trace (show state') $ Just state'
 
+
+---------------
+-- The event network
+---------------
+
+-- | entry point for the UI - build and actuate the event network
 gui :: Options -> IO ()
 gui options = start $ do
                 f               <- frame [ text := "hsChess"
@@ -117,29 +131,38 @@ gui options = start $ do
                                             -- This behavior holds the state of the game
                                             stateB  <- fromChanges newSuperState addHandlerS
 
+                                            -- Clock ticks events
                                             tickE   <- event0 t command
 
+                                            -- Clicks on play button events
                                             playE   <- event0 playBtn command
 
+                                            -- Clicks on help button events
                                             helpE   <- event0 helpBtn command
 
+                                            -- Text entered in move textarea
                                             moveInB <- behaviorText moveInput ""
 
-                                            -- Mouse pointer position
-                                            mouseE <- event1 boardPanel mouse   -- mouse events
+                                            -- All mouse related events
+                                            mouseE <- event1 boardPanel mouse
                                             let 
+                                                -- Mouse pointer position behavior
                                                 mouseB :: Behavior t Point
                                                 mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
 
+                                                -- Behavior holding the currently hovered board cell (if relevant)
                                                 activeCellB :: Behavior t (Maybe Pos)
                                                 activeCellB = posFromPoint <$> mouseB
 
                                             -- Drag and drop
                                             let 
-                                                dndE :: Event t DnD
-                                                dndE = accumE initialDnDState $ updateDnD <$> mouseE
+                                                -- Current state of the DnD process 
+                                                dndStateE :: Event t DnD
+                                                dndStateE = accumE initialDnDState $ updateDnDFSM <$> mouseE
+
+                                                -- Only the completed DnD events
                                                 completedDndE :: Event t DnD
-                                                completedDndE = filterE ((== Complete) . getDndState) dndE
+                                                completedDndE = filterE ((== Complete) . getDndState) dndStateE
 
                                             sink debug [ text :== stepper "" $ show <$> completedDndE ]
 
@@ -151,8 +174,8 @@ gui options = start $ do
 
                                             -- This behavior holds the recommendation
                                             -- The new recommendation is computed on helpE - help button clicked.
-                                            -- But the play button hides the recommendation - which is again made visible (after it has been updated
-                                            -- if we click again on 'help')
+                                            -- But the play button hides the recommendation - which is again made visible 
+                                            -- (after it has been updated if we click again on 'help')
                                             sink recommendation [ text :== stepper "Nothing" $ (maybe "Start a new game..." (last . getMoveHistoryFromState . fst) . helpPlayer <$> (stateB <@ helpE))
                                                                 , visible :== accumB True $ (pure False <$ playE) `union`
                                                                                             (pure True  <$ helpE) ]
@@ -208,27 +231,26 @@ gui options = start $ do
                 -- putStrLn networkRepr
                 actuate network
 
-dndToMove :: DnD -> String
-dndToMove (DnD Complete (Just source) (Just dest)) = let m = makeMove source dest 
-                                                      in trace ("dnd move is " ++ show m) show $ m
-dndToMove (DnD _ _ _) = ""
-
-
 -- | Filters 'EventMouse' to keep only the 'MouseMotion'
 justMotion :: EventMouse -> Maybe Point
 justMotion (MouseMotion p _) = Just p
 justMotion _                 = Nothing
 
-
+-- | Convert the PlayerState to a proper text message
 showPlayerState :: PlayerState -> String
 showPlayerState playerState | isCheckMate playerState = "CheckMate!"
                             | isCheck playerState = "Check!"
                             | otherwise = "So far so good"
 
+---------------
+-- Draw the board
+---------------
+
 -- | Find the right 'Bitmap' to represent a 'Piece'
 pieceBitmapFor :: Piece -> Bitmap ()
 pieceBitmapFor piece = bitmap $ getDataFile $ show (pieceColor piece) ++ show (pieceType piece) ++ ".png"
 
+-- | Draw a 'Bitmap' somewhere in the window
 drawBmp :: forall a. DC a -> Bitmap () -> Point -> IO ()
 drawBmp dc bmp pos = drawBitmap dc bmp pos True []
 
@@ -266,6 +288,7 @@ drawBoard dc _view = do
                         -- add a border to the board
                         drawRect dc (rect (point boardBorder boardBorder) (sz boardSize boardSize)) []
 
+-- | Convert a 'Point' (coordinate in the window) to a 'Maybe Pos' (position on the board - if relevant)
 posFromPoint :: Point -> Maybe Pos
 posFromPoint (Point x y) = let xx = (x - boardBorder) `div` squaresSize
                                yy = (y - boardBorder) `div` squaresSize
@@ -273,8 +296,50 @@ posFromPoint (Point x y) = let xx = (x - boardBorder) `div` squaresSize
                                 then Just $ Pos (yy, xx)
                                 else Nothing
 
+-- | Convert a Pos coordinate into a pixel position in the window corresponding to the corner of the square
 pos2Board :: Int -> Int
 pos2Board x = x * squaresSize + (boardMargin `div` 2)
+
+
+---------------
+-- Game state 
+---------------
+data GameState = GameState { getSuperState :: SuperState
+                           , getMousePosition :: Maybe Pos 
+                           }
+
+-- | Draw a 'Move' as a possible move.
+drawPossibleMove :: DC a -> Move -> IO ()
+drawPossibleMove dc move = do
+                            let Pos (yd, xd) = getDestination move
+                            circle dc
+                                  (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2)) 
+                                  pieceMargin [ color := green 
+                                              , brush := BrushStyle BrushSolid green ]
+
+-- | Draw a list of 'Move'
+drawPossibleMoves :: [Move] -> DC a -> IO ()
+drawPossibleMoves possibleMoves dc = mapM_ (drawPossibleMove dc) possibleMoves
+
+-- | Draw game state
+drawGameState :: GameState -> DC a -> b -> IO ()
+drawGameState state dc _view = trace "drawGameState" $ do
+    let
+        board = (getBoard . fst) (getSuperState state)
+        pieces = piecePosition board
+
+        piecesToDraw = map (\ (y,x,p) -> (point (pos2Board x + pieceMargin `div` 2) (pos2Board y + pieceMargin `div` 2), p)) pieces
+        possibleMoves = case getMousePosition state of Nothing -> trace "out!" []
+                                                       Just p -> trace "filtering" filter ((== p) . getSource) $ (snd . getSuperState) state
+
+    -- draw the board
+    drawBoard dc _view
+
+    -- draw the pieces on the board
+    mapM_ (drawPiece dc) piecesToDraw
+
+    -- draw legal moves
+    drawPossibleMoves possibleMoves dc
 
 
 ---------------
@@ -285,14 +350,19 @@ data DnDState = Inactive
               | Complete
               deriving (Show, Eq)
 
-data DnD = DnD { getDndState :: DnDState, getDndOrigin :: Maybe Pos , getDnDDestination :: Maybe Pos } deriving Show
+data DnD = DnD { getDndState :: DnDState
+               , getDndOrigin :: Maybe Pos
+               , getDnDDestination :: Maybe Pos 
+               } deriving Show
 
 
+-- | Create a new initial DnD 
 initialDnDState :: DnD
 initialDnDState = DnD Inactive Nothing Nothing
 
-updateDnD :: EventMouse -> DnD -> DnD
-updateDnD mouseEvent state = case (mouseEvent, getDndState state) of 
+-- | FSM for the DnD
+updateDnDFSM :: EventMouse -> DnD -> DnD
+updateDnDFSM mouseEvent state = case (mouseEvent, getDndState state) of 
                                                       (_, Complete)                     -> DnD Inactive Nothing Nothing
                                                       -- (MouseMotion _ _, Inactive)       -> state
                                                       -- (MouseMotion _ _, InProgress)     -> state
@@ -318,40 +388,8 @@ updateDnD mouseEvent state = case (mouseEvent, getDndState state) of
                                                       -- (MouseWheel _ _ _, _) -> state
                                                       (_, _) -> state
 
-
----------------
--- Game state 
----------------
-data GameState = GameState { getSuperState :: SuperState, getMousePosition :: Maybe Pos }
-
--- | Draw a 'Move' as a possible move.
-drawPossibleMove :: DC a -> Move -> IO ()
-drawPossibleMove dc move = do
-                            let -- Pos (ys, xs) = getSource move
-                                Pos (yd, xd) = getDestination move
-                            circle dc (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2)) pieceMargin [ color := green , brush := BrushStyle BrushSolid green ]
-                            --line dc (point (pos2Board xs + squaresSize `div` 2) (pos2Board ys + squaresSize `div` 2))
-                            --        (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2))
-                            --        [color := red]
-
--- | Draw a list of 'Move'
-drawPossibleMoves :: [Move] -> DC a -> IO ()
-drawPossibleMoves possibleMoves dc = mapM_ (drawPossibleMove dc) possibleMoves
-
--- | Draw game state
-drawGameState :: GameState -> DC a -> b -> IO ()
-drawGameState state dc _view = trace "drawGameState" $ do
-    let
-        board = (getBoard . fst) (getSuperState state)
-        pieces = piecePosition board
-
-        piecesToDraw = map (\ (y,x,p) -> (point (pos2Board x + pieceMargin `div` 2) (pos2Board y + pieceMargin `div` 2), p)) pieces
-        possibleMoves = case getMousePosition state of Nothing -> trace "out!" []
-                                                       Just p -> trace "filtering" filter ((== p) . getSource) $ (snd . getSuperState) state
-
-    -- draw the board
-    drawBoard dc _view
-    -- draw the pieces on the board
-    mapM_ (drawPiece dc) piecesToDraw
-
-    drawPossibleMoves possibleMoves dc
+-- | Convert a (complete) 'DnD' into the 'String' representing a 'Move'
+dndToMove :: DnD -> String
+dndToMove (DnD Complete (Just source) (Just dest)) = let m = makeMove source dest 
+                                                      in trace ("dnd move is " ++ show m) show $ m
+dndToMove (DnD _ _ _) = ""
