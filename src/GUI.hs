@@ -50,10 +50,8 @@ asyncPlayTurn fireS options m s = do
                                     _ <- ($)
                                         forkIO $ do
                                                     let !nS = playTurn options m s
-                                                    putStrLn "computation done"
-                                                    fireS nS
-                                    putStrLn "launched playTurn computation in a different thread"
-                                    return ()
+                                                    trace "computation done" $ fireS nS
+                                    trace "launched playTurn computation in a different thread" $ return ()
 
 -- | Do the player's move plus the AI's move
 playTurn :: Options -> String -> SuperState -> SuperState
@@ -68,7 +66,7 @@ playTurn options move state = trace "playTurn" $ case parseMove move of Right r 
                               playOpponentWithStrategy :: Maybe OpponentOption -> SuperState -> SuperState
                               playOpponentWithStrategy option s = case fromMaybe AB option of AB -> AB.doMove s
                                                                                               ML -> ML.doMove s
-                                                                                              M -> M.doMove s
+                                                                                              M  ->  M.doMove s
 
 
 ---------------
@@ -195,7 +193,9 @@ gui options = start $ do
                                             -- Take care of the move history widget
                                             let
                                                 moveHistoryE :: Event t [String]
-                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ playE, moveInValidatedE ]
+                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ playE
+                                                                                                                    , moveInValidatedE
+                                                                                                                    , tickE ]
                                                 moveHistoryB :: Behavior t [String]
                                                 moveHistoryB = stepper [] moveHistoryE
 
@@ -218,6 +218,7 @@ gui options = start $ do
                                             let
                                                 asyncPlayTurnB :: Behavior t (IO ())
                                                 asyncPlayTurnB = asyncPlayTurn fireS options <$> moveInB <*> stateB
+
                                             reactimate $ asyncPlayTurnB <@ (playE `union` moveInValidatedE)
 
                                             reactimate $ repaint boardPanel             <$ unions [ tickE, playE, moveInValidatedE ]
@@ -237,9 +238,9 @@ justMotion _                 = Nothing
 
 -- | Convert the PlayerState to a proper text message
 showPlayerState :: PlayerState -> String
-showPlayerState playerState | isCheckMate playerState = "CheckMate!"
-                            | isCheck playerState = "Check!"
-                            | otherwise = "So far so good"
+showPlayerState playerState | isCheckMate playerState   = "CheckMate!"
+                            | isCheck playerState       = "Check!"
+                            | otherwise                 = "So far so good"
 
 ---------------
 -- Draw the board
@@ -258,32 +259,43 @@ drawPiece :: DC a -> (Point, Square) -> IO ()
 drawPiece dc (pos, square) = maybe (return ()) doDraw square
             where doDraw piece = drawBmp dc (pieceBitmapFor piece) pos
 
+data Position = N | E | S | W
+
 -- | Draw the empty board
 drawBoard :: forall t a. DC a -> t -> IO ()
 drawBoard dc _view = do
                         let
                             labelPosition :: Int -> Int
-                            labelPosition p   = boardBorder + squaresSize `div` 2 + p * squaresSize
+                            labelPosition p   = boardBorder + squaresSize `div` 2 + p * squaresSize                            
                             labelFixedPosition :: Int
                             labelFixedPosition = boardBorder `div` 2
+                            labelFixedPositionOtherSide :: Int
+                            labelFixedPositionOtherSide = labelFixedPosition + boardSize + boardBorder
                             figures :: [(Int, Char)]
                             figures = zip [0..7::Int] ['0'..]
                             letters :: [(Int, Char)]
                             letters = zip [0..7::Int] ['a'..]
 
+                            placeAt :: Position -> Int -> Point
+                            placeAt GUI.W p = point labelFixedPosition (labelPosition p)
+                            placeAt GUI.E p = point labelFixedPositionOtherSide (labelPosition p)
+                            placeAt GUI.N p = point (labelPosition p) labelFixedPosition
+                            placeAt GUI.S p = point (labelPosition p) labelFixedPositionOtherSide
+
                             -- The board itself
                             squares = [ drawRect dc (rect (point (pos2Board x) (pos2Board y)) (sz squaresSize squaresSize )) [brushKind := BrushSolid, brushColor := black] | x <- [0..7::Int], y <- [0..7::Int], (x + y) `mod` 2 /= 0]
                             -- X labels (letters) on the left
-                            labelX  = map (\(p,t) -> drawText dc [t] (point labelFixedPosition (labelPosition p)) []) figures
+                            labelX  = map (\(p,t) -> drawText dc [t] (placeAt GUI.W p) []) figures
                             -- X labels (letters) on the right
-                            labelX2 = map (\(p,t) -> drawText dc [t] (point (labelFixedPosition + boardSize + boardBorder) (labelPosition p)) []) figures
+                            labelX2 = map (\(p,t) -> drawText dc [t] (placeAt GUI.E p) []) figures
                             -- Y labels (numbers) on the top
-                            labelY  = map (\(p,t) -> drawText dc [t] (point (labelPosition p) labelFixedPosition) []) letters
+                            labelY  = map (\(p,t) -> drawText dc [t] (placeAt GUI.N p) []) letters
                             -- Y labels (numbers) on the bottom
-                            labelY2 = map (\(p,t) -> drawText dc [t] (point (labelPosition p) (labelFixedPosition + boardSize + boardBorder)) []) letters
+                            labelY2 = map (\(p,t) -> drawText dc [t] (placeAt GUI.S p) []) letters
 
                         -- do draw the label and the squares all at once
                         sequence_ $ labelX ++ labelX2 ++ labelY ++ labelY2 ++ squares
+
                         -- add a border to the board
                         drawRect dc (rect (point boardBorder boardBorder) (sz boardSize boardSize)) []
 
@@ -312,7 +324,8 @@ drawPossibleMove :: DC a -> Move -> IO ()
 drawPossibleMove dc move = do
                             let Pos (yd, xd) = getDestination move
                             circle dc
-                                  (point (pos2Board xd + squaresSize `div` 2) (pos2Board yd + squaresSize `div` 2))
+                                  (point (pos2Board xd + squaresSize `div` 2) 
+                                         (pos2Board yd + squaresSize `div` 2))
                                   pieceMargin [ color := green
                                               , brush := BrushStyle BrushSolid green ]
 
@@ -328,8 +341,8 @@ drawGameState state dc _view = trace "drawGameState" $ do
         pieces = piecePosition board
 
         piecesToDraw = map (\ (y,x,p) -> (point (pos2Board x + pieceMargin `div` 2) (pos2Board y + pieceMargin `div` 2), p)) pieces
-        possibleMoves = case getMousePosition state of Nothing -> trace "out!" []
-                                                       Just p -> trace "filtering" filter ((== p) . getSource) $ (snd . getSuperState) state
+        possibleMoves = case getMousePosition state of Nothing -> []
+                                                       Just p  -> filter ((== p) . getSource) $ (snd . getSuperState) state
 
     -- draw the board
     drawBoard dc _view
