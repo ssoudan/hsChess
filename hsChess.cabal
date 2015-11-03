@@ -60,14 +60,14 @@ executable hsChess
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:     base >=4.6 && <4.8,
-                     cabal-macosx == 0.2.3,
+  build-depends:     base >=4.6 && <5.0,
+                     cabal-macosx >= 0.2.3,
                      Cabal,
                      parsec >= 3.0.1,
                      containers, 
                      dlist, 
                      reactive-banana-wx,
-                     reactive-banana,
+                     reactive-banana >= 1.0.0.0,
                      wx,
                      filepath,
                      executable-path,

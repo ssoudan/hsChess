@@ -44,6 +44,9 @@ boardBorder = boardMargin `div` 2
 -- Play turns
 ---------------
 
+union :: [Event a] -> Event a
+union xs = foldr1 (unionWith (curry fst)) xs
+
 -- | Async computation of the moves (player + AI)
 asyncPlayTurn :: (Handler SuperState) -> Options -> String -> SuperState -> IO ()
 asyncPlayTurn fireS options m s = do
@@ -121,7 +124,7 @@ gui options = start $ do
                 (addHandlerS, fireS) <- newAddHandler
 
                 -- Define the network of events
-                let networkDescription :: forall t. Frameworks t => Moment t ()
+                let networkDescription :: MomentIO ()
                     networkDescription = do
 
                                             -- Create a behavior from the handler
@@ -142,40 +145,42 @@ gui options = start $ do
 
                                             -- All mouse related events
                                             mouseE <- event1 boardPanel mouse
-                                            let
-                                                -- Mouse pointer position behavior
-                                                mouseB :: Behavior t Point
-                                                mouseB = stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
 
+                                            -- Mouse pointer position behavior
+                                            (mouseB :: Behavior Point) <- stepper (point 0 0) (filterJust $ justMotion <$> mouseE)
+
+                                            let
                                                 -- Behavior holding the currently hovered board cell (if relevant)
-                                                activeCellB :: Behavior t (Maybe Pos)
+                                                activeCellB :: Behavior (Maybe Pos)
                                                 activeCellB = posFromPoint <$> mouseB
 
                                             -- Drag and drop
+                                            -- Current state of the DnD process
+                                            (dndStateE :: Event DnD) <- accumE initialDnDState $ updateDnDFSM <$> mouseE
                                             let
-                                                -- Current state of the DnD process
-                                                dndStateE :: Event t DnD
-                                                dndStateE = accumE initialDnDState $ updateDnDFSM <$> mouseE
-
                                                 -- Only the completed DnD events
-                                                completedDndE :: Event t DnD
+                                                completedDndE :: Event DnD
                                                 completedDndE = filterE ((== Complete) . getDndState) dndStateE
 
-                                            sink debug [ text :== stepper "" $ show <$> completedDndE ]
+                                            debugTextB <- stepper "" $ show <$> completedDndE 
+
+                                            sink debug [ text :== debugTextB ]
 
                                             -- Catch 'Return' key on 'moveInput' to later use it has an event similar to 'playE'
                                             moveInE <- event1 moveInput keyboard
                                             let
-                                                moveInValidatedE :: Event t ()
+                                                moveInValidatedE :: Event ()
                                                 moveInValidatedE = pure (const ()) <@> filterE ((== KeyReturn ) . keyKey) moveInE
 
                                             -- This behavior holds the recommendation
                                             -- The new recommendation is computed on helpE - help button clicked.
                                             -- But the play button hides the recommendation - which is again made visible
                                             -- (after it has been updated if we click again on 'help')
-                                            sink recommendation [ text :== stepper "Nothing" $ (maybe "Start a new game..." (last . getMoveHistoryFromState . fst) . helpPlayer <$> (stateB <@ helpE))
-                                                                , visible :== accumB True $ (pure False <$ playE) `union`
-                                                                                            (pure True  <$ helpE) ]
+                                            recommendationTextB <- stepper "Nothing" $ (maybe "Start a new game..." (last . getMoveHistoryFromState . fst) . helpPlayer <$> (stateB <@ helpE))
+                                            recommendationVisibleB <- accumB True $  unions [(pure False <$ playE), (pure True  <$ helpE)]
+                                            sink recommendation [ text :== recommendationTextB
+                                                                , visible :== recommendationVisibleB
+                                                                ]
 
                                             -- Take care of the current player widget
                                             sink currentPlayer [ text :== (show . getPlayer . fst) <$> stateB ]
@@ -184,20 +189,20 @@ gui options = start $ do
                                             sink currentPlayerStatus [ text :== (showPlayerState . getCurrentPlayerState ) <$> stateB ]
 
                                             -- Take care of the board
-                                            sink boardPanel [ on paint :== stepper (\_dc _ -> return ()) $
-                                                     (drawGameState <$> (GameState <$> stateB <*> activeCellB)) <@ unions [ tickE, playE, moveInValidatedE ]]
+                                            boardPanelOnPaintB <- stepper (\_dc _ -> return ()) $ (drawGameState <$> (GameState <$> stateB <*> activeCellB)) <@ union [ tickE, playE, moveInValidatedE ] 
+                                            sink boardPanel [ on paint :== boardPanelOnPaintB]
 
                                             -- Hide the play button in case the player is mate
                                             sink playBtn [ visible :== (not . isCurrentPlayerMate ) <$> stateB ]
 
                                             -- Take care of the move history widget
                                             let
-                                                moveHistoryE :: Event t [String]
-                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ unions [ playE
+                                                moveHistoryE :: Event [String]
+                                                moveHistoryE = (getMoveHistoryFromState . fst <$> stateB) <@ union [ playE
                                                                                                                     , moveInValidatedE
                                                                                                                     , tickE ]
-                                                moveHistoryB :: Behavior t [String]
-                                                moveHistoryB = stepper [] moveHistoryE
+                                                
+                                            (moveHistoryB :: Behavior [String]) <- stepper [] moveHistoryE
 
                                             sink moveList [ items :== moveHistoryB ]
 
@@ -206,25 +211,25 @@ gui options = start $ do
                                                 asyncPlayTurnFromDnD :: SuperState -> DnD -> IO ()
                                                 asyncPlayTurnFromDnD s m = asyncPlayTurn fireS options (dndToMove m) s
 
-                                                asyncPlayTurnFromDnDB :: Behavior t (DnD -> IO ())
+                                                asyncPlayTurnFromDnDB :: Behavior (DnD -> IO ())
                                                 asyncPlayTurnFromDnDB = asyncPlayTurnFromDnD <$> stateB
 
-                                                asyncPlayTurnFromDnDE :: Event t (IO ())
+                                                asyncPlayTurnFromDnDE :: Event (IO ())
                                                 asyncPlayTurnFromDnDE = asyncPlayTurnFromDnDB <@> completedDndE
 
                                             reactimate $ asyncPlayTurnFromDnDE
 
                                             -- Take care of the manually entered moves (still needed for castling)
                                             let
-                                                asyncPlayTurnB :: Behavior t (IO ())
+                                                asyncPlayTurnB :: Behavior (IO ())
                                                 asyncPlayTurnB = asyncPlayTurn fireS options <$> moveInB <*> stateB
 
-                                            reactimate $ asyncPlayTurnB <@ (playE `union` moveInValidatedE)
+                                            reactimate $ asyncPlayTurnB <@ (union [playE, moveInValidatedE])
 
-                                            reactimate $ repaint boardPanel             <$ unions [ tickE, playE, moveInValidatedE ]
+                                            reactimate $ repaint boardPanel             <$ union [ tickE, playE, moveInValidatedE ]
                                             reactimate $ repaint currentPlayer          <$ tickE
                                             reactimate $ repaint currentPlayerStatus    <$ tickE
-                                            reactimate $ repaint recommendation         <$ unions [ tickE, playE, moveInValidatedE, helpE]
+                                            reactimate $ repaint recommendation         <$ union [ tickE, playE, moveInValidatedE, helpE]
 
                 network <- compile networkDescription
                 -- networkRepr <- showNetwork network
